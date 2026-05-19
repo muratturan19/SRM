@@ -55,3 +55,4 @@ class Contact(Base):
     # Relationships
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="contact", cascade="all, delete-orphan")
     reminders: Mapped[list["Reminder"]] = relationship("Reminder", back_populates="contact", cascade="all, delete-orphan")
+    activities: Mapped[list["Activity"]] = relationship("Activity", back_populates="contact", cascade="all, delete-orphan", order_by="Activity.created_at.desc()")

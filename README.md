@@ -1,6 +1,6 @@
-# Kolektif360 CRM
+# Kolektif360 SRM v1.2.0
 
-Modern, AI destekli müşteri ilişkileri yönetim sistemi.
+**S**elin **R**elations **M**anagement — Modern, hafif müşteri ilişkileri yönetim sistemi.
 
 ## Özellikler
 
@@ -9,7 +9,12 @@ Modern, AI destekli müşteri ilişkileri yönetim sistemi.
 - ✅ **Temas Aşamaları** — Temas/Görüşme/Tanıtım/Teklif checkbox takibi
 - 🤝 **Müşteri Yönetimi** — Anlaşma, tutar, sözleşme PDF
 - 🔔 **Hatırlatıcılar** — Windows toast + tarayıcı bildirimi
-- 📊 **Dashboard** — Pipeline dağılımı, dönüşüm oranı, gelir özeti
+- 📊 **Dashboard** — Pipeline değeri, ağırlıklı tahmin, gelir özeti, funnel grafiği
+- 📋 **Aktivite Zaman Çizelgesi** — Arama/toplantı/e-posta/not/görev kaydı; tarih-saat seçimi
+- 📝 **Görüşme Notları** — Kişi bazlı tarihli not geçmişi
+- 📤 **CSV İçe/Dışa Aktarma** — Toplu kişi yükleme ve dışa aktarma
+- 🔍 **Gelişmiş Filtreler** — Etiket filtresi, son iletişim tarihine göre filtreleme
+- 🔁 **Çift Kayıt Tespiti** — Yeni kişi eklerken e-posta/telefon çakışma uyarısı
 
 ---
 
@@ -50,8 +55,8 @@ copy data\.env.example data\.env
 python run.py
 ```
 
-Backend `http://localhost:8000` adresinde çalışır.  
-API dokümantasyonu: `http://localhost:8000/docs`
+Backend `http://localhost:8010` adresinde çalışır.  
+API dokümantasyonu: `http://localhost:8010/docs`
 
 ---
 
@@ -103,17 +108,18 @@ Backend çalışırken hatırlatıcı zamanı geldiğinde:
 SRM/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/     # contacts, deals, reminders, scan, dashboard
+│   │   ├── api/routes/     # contacts, deals, activities, reminders, scan, dashboard
 │   │   ├── core/           # config, database
-│   │   ├── models/         # SQLAlchemy modelleri
+│   │   ├── models/         # SQLAlchemy modelleri (contact, deal, activity, reminder)
 │   │   ├── schemas/        # Pydantic şemaları
 │   │   └── services/       # card_scanner, reminder_scheduler
 │   ├── data/.env           # Ayarlar (versiyon kontrolüne girmesin!)
 │   └── requirements.txt
-└── frontend/
-    └── src/
-        ├── pages/          # Dashboard, Contacts, Pipeline, Customers, Reminders
-        ├── components/     # Layout, Sidebar, CardScannerModal, ReminderPopup
-        ├── services/       # API client
-        └── theme/          # Kolektif360 marka teması
+├── frontend/
+│   └── src/
+│       ├── pages/          # Dashboard, Contacts, ContactDetail, Pipeline, Customers, Reminders
+│       ├── components/     # Layout, Sidebar, CardScannerModal, ActivityTimeline, ReminderPopup
+│       ├── services/       # API client
+│       └── theme/          # Kolektif360 marka teması
+└── CHANGELOG.md
 ```

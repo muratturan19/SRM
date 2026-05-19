@@ -1,9 +1,23 @@
+import os
+import sys
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 
-# Backend package root: …/backend/app/core/config.py → …/backend
-_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+
+def _resolve_data_dir() -> Path:
+    """
+    Üretimde (PyInstaller frozen): SRM_DATA_DIR env → C:\\ProgramData\\KolektifSRM
+    Geliştirmede: backend/ klasörü
+    """
+    if getattr(sys, "frozen", False):
+        env_dir = os.environ.get("SRM_DATA_DIR")
+        return Path(env_dir) if env_dir else Path(r"C:\ProgramData\KolektifSRM")
+    # Dev: …/backend/app/core/config.py → …/backend
+    return Path(__file__).resolve().parent.parent.parent
+
+
+_DATA_DIR = _resolve_data_dir()
 
 
 class Settings(BaseSettings):
@@ -17,8 +31,11 @@ class Settings(BaseSettings):
     # "claude" or "gpt" — falls back to the other if primary fails
     scan_provider: str = "claude"
 
+    # Veri dizini (uploads, logs, backups) — .env'den override edilebilir
+    data_dir: str = str(_DATA_DIR)
+
     # File storage (absolute path so it works regardless of cwd)
-    upload_dir: str = str(_BACKEND_DIR / "uploads")
+    upload_dir: str = str(_DATA_DIR / "uploads")
 
     # CORS — tüm localhost portlarına izin ver (dev ortamı)
     cors_origins: List[str] = [
@@ -28,10 +45,10 @@ class Settings(BaseSettings):
         "http://localhost:3000",
     ]
 
-    app_name: str = "Kolektif360 CRM"
+    app_name: str = "Kolektif360 SRM"
 
     model_config = {
-        "env_file": str(_BACKEND_DIR / "data" / ".env"),
+        "env_file": str(_DATA_DIR / "data" / ".env"),
         "env_file_encoding": "utf-8",
     }
 

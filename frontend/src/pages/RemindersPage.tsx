@@ -3,7 +3,7 @@ import {
   Box, Typography, Card, CardContent, List, ListItem,
   ListItemText, ListItemIcon, Chip, IconButton, Button,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Grid, FormControlLabel, Checkbox, Divider,
+  TextField, Grid, FormControlLabel, Checkbox,
   Tooltip,
 } from '@mui/material'
 import { Add, Alarm, Delete, CheckCircle, RadioButtonUnchecked } from '@mui/icons-material'
@@ -17,7 +17,6 @@ import type { Reminder } from '../types'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
-import { TextField as MuiTextField } from '@mui/material'
 
 dayjs.extend(relativeTime)
 dayjs.locale('tr')

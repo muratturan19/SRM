@@ -1,11 +1,11 @@
 import axios from 'axios'
-import type { Contact, Deal, Reminder, DashboardStats, SystemSettings } from '../types'
+import type { Contact, Deal, Reminder, DashboardStats, SystemSettings, Activity } from '../types'
 
 const api = axios.create({ baseURL: '/api' })
 
 // ── Contacts ──────────────────────────────────────────────────────
 export const contactsApi = {
-  list: (params?: { search?: string; stage?: string }) =>
+  list: (params?: { search?: string; stage?: string; tags?: string; no_contact_days?: number }) =>
     api.get<Contact[]>('/contacts', { params }).then((r) => r.data),
 
   get: (id: string) =>
@@ -24,6 +24,20 @@ export const contactsApi = {
     const fd = new FormData()
     fd.append('file', file)
     return api.post<Contact>(`/contacts/${id}/avatar`, fd).then((r) => r.data)
+  },
+
+  exportCsv: () =>
+    api.get('/contacts/export/csv', { responseType: 'blob' }).then((r) => r.data as Blob),
+
+  importCsv: (file: File, skipDuplicates = true) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api
+      .post<{ created: number; skipped: number; errors: string[] }>(
+        `/contacts/import/csv?skip_duplicates=${skipDuplicates}`,
+        fd,
+      )
+      .then((r) => r.data)
   },
 }
 
@@ -47,6 +61,20 @@ export const dealsApi = {
     fd.append('file', file)
     return api.post<Deal>(`/deals/${dealId}/contract`, fd).then((r) => r.data)
   },
+}
+
+// ── Activities ────────────────────────────────────────────────────
+export const activitiesApi = {
+  byContact: (contactId: string, type?: string) =>
+    api.get<Activity[]>(`/activities/contact/${contactId}`, { params: type ? { type } : undefined }).then((r) => r.data),
+
+  create: (data: Partial<Activity> & { contact_id: string }) =>
+    api.post<Activity>('/activities', data).then((r) => r.data),
+
+  update: (id: string, data: Partial<Activity>) =>
+    api.patch<Activity>(`/activities/${id}`, data).then((r) => r.data),
+
+  delete: (id: string) => api.delete(`/activities/${id}`),
 }
 
 // ── Reminders ─────────────────────────────────────────────────────

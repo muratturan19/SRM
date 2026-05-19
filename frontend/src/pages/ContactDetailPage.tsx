@@ -9,16 +9,17 @@ import {
 } from '@mui/material'
 import {
   ArrowBack, Edit, Add, Delete, UploadFile,
-  Email, Phone, LinkedIn, Language, LocationOn, Map,
+  Email, Phone, LinkedIn, Language, LocationOn, Map, Timeline,
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import dayjs from 'dayjs'
-import { contactsApi, dealsApi, remindersApi } from '../services/api'
+import { contactsApi, dealsApi, remindersApi, activitiesApi } from '../services/api'
 import { STAGE_LABELS, STAGE_COLORS } from '../types'
-import type { Contact, Deal, Reminder } from '../types'
+import type { Contact, Deal, Reminder, Activity } from '../types'
 import ContactFormFields from '../components/ContactForm'
 import type { ContactFormValues } from '../components/ContactForm'
+import ActivityTimeline from '../components/ActivityTimeline'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
@@ -36,12 +37,34 @@ export default function ContactDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [dealOpen, setDealOpen] = useState(false)
   const [reminderOpen, setReminderOpen] = useState(false)
-  const [contractDealId, setContractDealId] = useState<string | null>(null)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  const [_contractDealId, setContractDealId] = useState<string | null>(null)
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ['contact', id],
     queryFn: () => contactsApi.get(id!),
     enabled: !!id,
+  })
+
+  const { data: meetingNotes = [] } = useQuery({
+    queryKey: ['activities', id, 'note'],
+    queryFn: () => activitiesApi.byContact(id!, 'note'),
+    enabled: !!id,
+  })
+
+  const addNoteMut = useMutation({
+    mutationFn: () => activitiesApi.create({ contact_id: id!, type: 'note', content: noteText }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['activities', id, 'note'] })
+      setNoteOpen(false)
+      setNoteText('')
+    },
+  })
+
+  const deleteNoteMut = useMutation({
+    mutationFn: (actId: string) => activitiesApi.delete(actId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['activities', id, 'note'] }),
   })
 
   const { control: editControl, handleSubmit: handleEdit, reset: resetEdit } =
@@ -312,12 +335,18 @@ export default function ContactDetailPage() {
         <Card>
           <CardContent>
             <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+              <Tab label={`Aktiviteler (${contact.activities?.length ?? 0})`} icon={<Timeline fontSize="small" />} iconPosition="start" />
               <Tab label={`Anlaşmalar (${contact.deals?.length ?? 0})`} />
               <Tab label={`Hatırlatıcılar (${contact.reminders?.length ?? 0})`} />
             </Tabs>
 
-            {/* Deals tab */}
+            {/* Activities tab */}
             <TabPanel value={tab} index={0}>
+              <ActivityTimeline contactId={id!} />
+            </TabPanel>
+
+            {/* Deals tab */}
+            <TabPanel value={tab} index={1}>
               <Button startIcon={<Add />} variant="contained" size="small" onClick={() => setDealOpen(true)} sx={{ mb: 2 }}>
                 Anlaşma Ekle
               </Button>
@@ -394,7 +423,7 @@ export default function ContactDetailPage() {
             </TabPanel>
 
             {/* Reminders tab */}
-            <TabPanel value={tab} index={1}>
+            <TabPanel value={tab} index={2}>
               <Button startIcon={<Add />} variant="contained" size="small" onClick={() => setReminderOpen(true)} sx={{ mb: 2 }}>
                 Hatırlatıcı Ekle
               </Button>
@@ -438,6 +467,88 @@ export default function ContactDetailPage() {
             </TabPanel>
           </CardContent>
         </Card>
+
+        {/* Meeting Notes */}
+        <Card sx={{ mt: 2 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600}>Görüşme Notları</Typography>
+              <Button startIcon={<Add />} size="small" variant="outlined" onClick={() => setNoteOpen(true)}>
+                Ekle
+              </Button>
+            </Box>
+            <Divider sx={{ mb: 1.5 }} />
+            {meetingNotes.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                Henüz görüşme notu eklenmemiş.
+              </Typography>
+            ) : (
+              <List disablePadding>
+                {meetingNotes.map((note: Activity) => (
+                  <ListItem
+                    key={note.id}
+                    alignItems="flex-start"
+                    divider
+                    sx={{ px: 0, gap: 1 }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {note.content}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          {dayjs(note.created_at).format('DD.MM.YYYY HH:mm')}
+                        </Typography>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <Tooltip title="Sil">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            if (confirm('Bu not silinsin mi?')) deleteNoteMut.mutate(note.id)
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Note Dialog */}
+        <Dialog open={noteOpen} onClose={() => { setNoteOpen(false); setNoteText('') }} maxWidth="sm" fullWidth>
+          <DialogTitle>Görüşme Notu Ekle</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <TextField
+              label="Not"
+              multiline
+              rows={5}
+              fullWidth
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Bugünkü görüşmede neler konuşuldu..."
+              autoFocus
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setNoteOpen(false); setNoteText('') }}>İptal</Button>
+            <Button
+              variant="contained"
+              onClick={() => addNoteMut.mutate()}
+              disabled={!noteText.trim() || addNoteMut.isPending}
+            >
+              Kaydet
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Edit Dialog */}
         <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="md" fullWidth>

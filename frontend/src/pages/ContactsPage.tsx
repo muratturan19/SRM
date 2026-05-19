@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Box,
   Typography,
@@ -22,7 +22,12 @@ import {
   InputAdornment,
   Tooltip,
   Checkbox,
-  FormControlLabel,
+  Alert,
+  Snackbar,
+  List,
+  ListItem,
+  ListItemText,
+  Collapse,
 } from '@mui/material'
 import {
   Add,
@@ -30,6 +35,11 @@ import {
   CameraAlt,
   Delete,
   OpenInNew,
+  FileDownload,
+  FileUpload,
+  WarningAmber,
+  FilterList,
+  LocalOffer,
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -78,15 +88,25 @@ export default function ContactsPage() {
 
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState<ContactStage | ''>('')
+  const [tagsFilter, setTagsFilter] = useState('')
+  const [noContactDays, setNoContactDays] = useState<number | ''>('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null)
+  const [snackMsg, setSnackMsg] = useState<string | null>(null)
+  const [duplicates, setDuplicates] = useState<{ id: string; name: string; company?: string; email?: string; phone?: string }[] | null>(null)
+  const [pendingCreate, setPendingCreate] = useState<ContactFormValues | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts', search, stageFilter],
+    queryKey: ['contacts', search, stageFilter, tagsFilter, noContactDays],
     queryFn: () =>
       contactsApi.list({
         search: search || undefined,
         stage: stageFilter || undefined,
+        tags: tagsFilter || undefined,
+        no_contact_days: noContactDays || undefined,
       }),
   })
 
@@ -100,7 +120,16 @@ export default function ContactsPage() {
       qc.invalidateQueries({ queryKey: ['contacts'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       setAddOpen(false)
+      setDuplicates(null)
+      setPendingCreate(null)
       reset(DEFAULT_VALUES)
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail
+      if (detail?.duplicates) {
+        setDuplicates(detail.duplicates)
+        setPendingCreate(null)
+      }
     },
   })
 
@@ -118,6 +147,34 @@ export default function ContactsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contacts'] }),
   })
 
+  const handleExport = async () => {
+    try {
+      const blob = await contactsApi.exportCsv()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `srm_contacts_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setSnackMsg('Dışa aktarma başarısız.')
+    }
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const result = await contactsApi.importCsv(file)
+      setImportResult(result)
+      qc.invalidateQueries({ queryKey: ['contacts'] })
+    } catch {
+      setSnackMsg('İçe aktarma başarısız.')
+    } finally {
+      e.target.value = ''
+    }
+  }
+
   const onScanResult = (data: Partial<ContactFormValues>) => {
     Object.entries(data).forEach(([k, v]) =>
       setValue(k as keyof ContactFormValues, v as never)
@@ -132,6 +189,22 @@ export default function ContactsPage() {
           Kişiler
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="CSV olarak dışa aktar">
+            <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExport} size="small">
+              Dışa Aktar
+            </Button>
+          </Tooltip>
+          <Tooltip title="CSV'den içe aktar">
+            <Button
+              variant="outlined"
+              startIcon={<FileUpload />}
+              onClick={() => importInputRef.current?.click()}
+              size="small"
+            >
+              İçe Aktar
+            </Button>
+          </Tooltip>
+          <input ref={importInputRef} type="file" accept=".csv" hidden onChange={handleImportFile} />
           <Button
             variant="outlined"
             startIcon={<CameraAlt />}
@@ -146,7 +219,7 @@ export default function ContactsPage() {
       </Box>
 
       {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 1, alignItems: 'center' }}>
         <TextField
           size="small"
           placeholder="İsim, şirket, e-posta ara…"
@@ -168,7 +241,51 @@ export default function ContactsPage() {
             <MenuItem key={s} value={s}>{STAGE_LABELS[s]}</MenuItem>
           ))}
         </TextField>
+        <Tooltip title={showAdvanced ? 'Gelişmiş filtreyi gizle' : 'Gelişmiş filtre'}>
+          <Button
+            size="small"
+            variant={showAdvanced || tagsFilter || noContactDays ? 'contained' : 'outlined'}
+            startIcon={<FilterList />}
+            onClick={() => setShowAdvanced(v => !v)}
+          >
+            Filtre
+          </Button>
+        </Tooltip>
+        {(tagsFilter || noContactDays) && (
+          <Button size="small" color="error" onClick={() => { setTagsFilter(''); setNoContactDays('') }}>
+            Temizle
+          </Button>
+        )}
       </Box>
+
+      <Collapse in={showAdvanced}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Etiket ara (ör: EdTech)"
+            value={tagsFilter}
+            onChange={(e) => setTagsFilter(e.target.value)}
+            InputProps={{ startAdornment: <InputAdornment position="start"><LocalOffer fontSize="small" /></InputAdornment> }}
+            sx={{ width: 220 }}
+            label="Etiket"
+          />
+          <TextField
+            select
+            size="small"
+            value={noContactDays}
+            onChange={(e) => setNoContactDays(e.target.value === '' ? '' : Number(e.target.value))}
+            sx={{ width: 240 }}
+            label="Son iletişim yok (gün)"
+          >
+            <MenuItem value="">Filtre yok</MenuItem>
+            <MenuItem value={7}>7 gündür iletişim yok</MenuItem>
+            <MenuItem value={14}>14 gündür iletişim yok</MenuItem>
+            <MenuItem value={30}>30 gündür iletişim yok</MenuItem>
+            <MenuItem value={60}>60 gündür iletişim yok</MenuItem>
+            <MenuItem value={90}>90 gündür iletişim yok</MenuItem>
+          </TextField>
+        </Box>
+      </Collapse>
 
       {/* Table */}
       <TableContainer component={Paper} variant="outlined">
@@ -301,13 +418,79 @@ export default function ContactsPage() {
           <Button onClick={() => setAddOpen(false)}>İptal</Button>
           <Button
             variant="contained"
-            onClick={handleSubmit((data) => createMut.mutate(data))}
+            onClick={handleSubmit((data) => { setPendingCreate(data); createMut.mutate(data) })}
             disabled={createMut.isPending}
           >
             Kaydet
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Duplicate Warning Dialog */}
+      <Dialog open={!!duplicates} onClose={() => setDuplicates(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningAmber color="warning" /> Benzer Kişi Bulundu
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Aynı e-posta veya telefona sahip kişi(ler) mevcut:
+          </Typography>
+          <List disablePadding>
+            {(duplicates ?? []).map((d) => (
+              <ListItem key={d.id} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemText
+                  primary={`${d.name}${d.company ? ` — ${d.company}` : ''}`}
+                  secondary={[d.email, d.phone].filter(Boolean).join(' · ')}
+                />
+                <Button size="small" onClick={() => { navigate(`/contacts/${d.id}`); setDuplicates(null) }}>
+                  Görüntüle
+                </Button>
+              </ListItem>
+            ))}
+          </List>
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            Yine de kaydetmek istiyor musunuz?
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDuplicates(null)}>İptal</Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={() => {
+              if (pendingCreate) createMut.mutate(pendingCreate)
+              setDuplicates(null)
+            }}
+          >
+            Yine de Kaydet
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Import Result Dialog */}
+      <Dialog open={!!importResult} onClose={() => setImportResult(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>İçe Aktarma Sonucu</DialogTitle>
+        <DialogContent>
+          <Typography>✅ Eklendi: <strong>{importResult?.created}</strong></Typography>
+          <Typography>⏭ Atlandı (duplicate): <strong>{importResult?.skipped}</strong></Typography>
+          {(importResult?.errors ?? []).length > 0 && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              {importResult!.errors.join('\n')}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportResult(null)}>Kapat</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={!!snackMsg}
+        autoHideDuration={4000}
+        onClose={() => setSnackMsg(null)}
+        message={snackMsg}
+      />
     </Box>
   )
 }

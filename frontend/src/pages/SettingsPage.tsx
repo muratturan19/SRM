@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Box,
@@ -12,8 +12,25 @@ import {
   Stack,
   Alert,
   CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Chip,
 } from '@mui/material'
-import { Save } from '@mui/icons-material'
+import {
+  Save,
+  Download,
+  Upload,
+  DeleteOutline,
+  BackupOutlined,
+} from '@mui/icons-material'
 import { settingsApi } from '../services/api'
 import type { ReminderRule, SystemSettings } from '../types'
 
@@ -34,6 +51,22 @@ const DEFAULT_RULES: ReminderRule[] = [
 export default function SettingsPage() {
   const qc = useQueryClient()
   const [saved, setSaved] = useState(false)
+
+  // ── Backup/Restore state ───────────────────────────────────────
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [backupMsg, setBackupMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [confirmRestore, setConfirmRestore] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { data: backupList, refetch: refetchBackups } = useQuery({
+    queryKey: ['backups'],
+    queryFn: async () => {
+      const r = await fetch('/api/admin/backups')
+      if (!r.ok) throw new Error('Liste alınamadı')
+      return r.json() as Promise<{ name: string; size_kb: number; created: string }[]>
+    },
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -73,6 +106,64 @@ export default function SettingsPage() {
       snooze_enabled: effectiveSnooze,
       snooze_days: effectiveDays,
     })
+  }
+
+  // ── Backup handlers ────────────────────────────────────────────
+  const handleBackup = async () => {
+    setBackupLoading(true)
+    setBackupMsg(null)
+    try {
+      const r = await fetch('/api/admin/backup')
+      if (!r.ok) {
+        const err = await r.json()
+        throw new Error(err.detail ?? 'Yedekleme hatası')
+      }
+      const blob = await r.blob()
+      const cd = r.headers.get('Content-Disposition') ?? ''
+      const match = cd.match(/filename="?([^"]+)"?/)
+      const filename = match?.[1] ?? `srm_backup_${Date.now()}.sql`
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+      setBackupMsg({ type: 'success', text: `${filename} indirildi` })
+      refetchBackups()
+    } catch (e: any) {
+      setBackupMsg({ type: 'error', text: e.message })
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const handleRestoreFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (f) setConfirmRestore(f)
+    e.target.value = ''
+  }
+
+  const handleRestoreConfirm = async () => {
+    if (!confirmRestore) return
+    setConfirmRestore(null)
+    setRestoreLoading(true)
+    setBackupMsg(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', confirmRestore)
+      const r = await fetch('/api/admin/restore', { method: 'POST', body: fd })
+      const body = await r.json()
+      if (!r.ok) throw new Error(body.detail ?? 'Geri yükleme hatası')
+      setBackupMsg({ type: 'success', text: 'Veritabanı başarıyla geri yüklendi' })
+      qc.invalidateQueries()
+    } catch (e: any) {
+      setBackupMsg({ type: 'error', text: e.message })
+    } finally {
+      setRestoreLoading(false)
+    }
+  }
+
+  const handleDeleteBackup = async (name: string) => {
+    await fetch(`/api/admin/backups/${name}`, { method: 'DELETE' })
+    refetchBackups()
   }
 
   if (isLoading) {
@@ -188,6 +279,99 @@ export default function SettingsPage() {
       >
         Kaydet
       </Button>
+
+      {/* ── Yedekleme & Geri Yükleme ───────────────────────── */}
+      <Paper variant="outlined" sx={{ p: 3, mt: 4 }}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+          <BackupOutlined color="primary" />
+          <Typography variant="subtitle1" fontWeight={700}>
+            Yedekleme & Geri Yükleme
+          </Typography>
+        </Stack>
+
+        {backupMsg && (
+          <Alert severity={backupMsg.type} sx={{ mb: 2 }} onClose={() => setBackupMsg(null)}>
+            {backupMsg.text}
+          </Alert>
+        )}
+
+        <Stack direction="row" spacing={2} mb={3}>
+          <Button
+            variant="outlined"
+            startIcon={backupLoading ? <CircularProgress size={16} /> : <Download />}
+            onClick={handleBackup}
+            disabled={backupLoading || restoreLoading}
+          >
+            Şimdi Yedekle
+          </Button>
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={restoreLoading ? <CircularProgress size={16} /> : <Upload />}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={backupLoading || restoreLoading}
+          >
+            Yedekten Yükle
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".sql"
+            style={{ display: 'none' }}
+            onChange={handleRestoreFileSelect}
+          />
+        </Stack>
+
+        {backupList && backupList.length > 0 && (
+          <>
+            <Typography variant="caption" color="text.secondary" mb={1} display="block">
+              Kaydedilmiş yedekler
+            </Typography>
+            <List dense disablePadding>
+              {backupList.map((b) => (
+                <ListItem key={b.name} divider sx={{ px: 0 }}>
+                  <ListItemText
+                    primary={b.name}
+                    secondary={b.created}
+                    primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                  <ListItemSecondaryAction>
+                    <Chip label={`${b.size_kb} KB`} size="small" sx={{ mr: 1 }} />
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteBackup(b.name)}
+                      title="Yedeği sil"
+                    >
+                      <DeleteOutline fontSize="small" />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </>
+        )}
+      </Paper>
+
+      {/* ── Geri Yükleme Onay Dialog ────────────────────────── */}
+      <Dialog open={!!confirmRestore} onClose={() => setConfirmRestore(null)}>
+        <DialogTitle>Geri Yüklemeyi Onayla</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <strong>{confirmRestore?.name}</strong> dosyasından geri yükleme yapılacak.
+            <br /><br />
+            ⚠️ Mevcut tüm veriler (kişiler, müşteriler, anlaşmalar) bu yedekle
+            <strong> kalıcı olarak değiştirilecek</strong>. Devam etmek istiyor musunuz?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmRestore(null)}>İptal</Button>
+          <Button color="warning" variant="contained" onClick={handleRestoreConfirm}>
+            Evet, Geri Yükle
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

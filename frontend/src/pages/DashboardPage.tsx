@@ -26,8 +26,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { STAGE_LABELS, STAGE_COLORS } from '../types'
-import type { ContactStage } from '../types'
+import { STAGE_LABELS, STAGE_COLORS, DEAL_STAGE_LABELS, DEAL_STAGE_COLORS } from '../types'
+import type { ContactStage, DealStage } from '../types'
 
 function StatCard({
   icon,
@@ -78,6 +78,17 @@ export default function DashboardPage() {
         color: STAGE_COLORS[stage as ContactStage] ?? '#94A3B8',
       }))
     : []
+
+  const dealFunnelData = data
+    ? Object.entries(data.deal_stage_values ?? {}).map(([stage, value]) => ({
+        name: DEAL_STAGE_LABELS[stage as DealStage] ?? stage,
+        value: value as number,
+        color: DEAL_STAGE_COLORS[stage as DealStage] ?? '#94A3B8',
+      }))
+    : []
+
+  const fmt = (v: number) =>
+    new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(v)
 
   return (
     <Box>
@@ -216,25 +227,74 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* Deal value */}
-      {data && data.total_deal_value > 0 && (
+      {/* Revenue forecast row */}
+      <Grid container spacing={2} mt={0}>
+        <Grid item xs={12} sm={6} md={3}>
+          {isLoading ? <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 4 }} /> : (
+            <StatCard
+              icon={<AttachMoney />}
+              label="Toplam Pipeline"
+              value={fmt(data?.pipeline_value ?? 0)}
+              color="#06B6D4"
+              sub="Açık anlaşma değeri"
+            />
+          )}
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          {isLoading ? <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 4 }} /> : (
+            <StatCard
+              icon={<TrendingUp />}
+              label="Ağırlıklı Tahmin"
+              value={fmt(data?.weighted_forecast ?? 0)}
+              color="#8B5CF6"
+              sub="Olasılık × Değer"
+            />
+          )}
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          {isLoading ? <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 4 }} /> : (
+            <StatCard
+              icon={<Stars />}
+              label="Bu Ay Kapanan"
+              value={fmt(data?.this_month_value ?? 0)}
+              color="#10B981"
+              sub={new Date().toLocaleString('tr-TR', { month: 'long', year: 'numeric' })}
+            />
+          )}
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          {isLoading ? <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 4 }} /> : (
+            <StatCard
+              icon={<AttachMoney />}
+              label="Toplam Anlaşma"
+              value={fmt(data?.total_deal_value ?? 0)}
+              color="#F59E0B"
+              sub="Tüm zamanlar"
+            />
+          )}
+        </Grid>
+      </Grid>
+
+      {/* Deal stage funnel */}
+      {dealFunnelData.length > 0 && (
         <Box mt={2}>
           <Card>
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: '#06B6D4', width: 48, height: 48 }}>
-                <AttachMoney />
-              </Avatar>
-              <Box>
-                <Typography variant="h5" fontWeight={700}>
-                  {new Intl.NumberFormat('tr-TR', {
-                    style: 'currency',
-                    currency: 'TRY',
-                  }).format(data.total_deal_value)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Toplam Anlaşma Değeri
-                </Typography>
-              </Box>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight={600} mb={2}>
+                Anlaşma Hunisi — Aşamaya Göre Değer
+              </Typography>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={dealFunnelData} barSize={40}>
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tickFormatter={(v) => new Intl.NumberFormat('tr-TR', { notation: 'compact' }).format(v)} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {dealFunnelData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </Box>

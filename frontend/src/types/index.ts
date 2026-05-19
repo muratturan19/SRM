@@ -6,6 +6,22 @@ export type ContactStage =
   | 'proposal_sent'
   | 'customer'
 
+export type ActivityType = 'call' | 'meeting' | 'email' | 'note' | 'task'
+
+export type DealStage = 'new' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost'
+
+export interface Activity {
+  id: string
+  contact_id: string
+  type: ActivityType
+  content: string
+  outcome?: string
+  due_at?: string
+  is_done: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Contact {
   id: string
   name: string
@@ -30,6 +46,7 @@ export interface Contact {
   updated_at: string
   deals?: Deal[]
   reminders?: Reminder[]
+  activities?: Activity[]
 }
 
 export interface Deal {
@@ -38,11 +55,14 @@ export interface Deal {
   product_name: string
   amount?: number
   currency: string
+  stage: DealStage
+  probability?: number
   contract_date?: string
   contract_pdf_path?: string
   notes?: string
   created_at: string
   updated_at: string
+  contact?: Pick<Contact, 'id' | 'name' | 'company'>
 }
 
 export interface Reminder {
@@ -63,6 +83,10 @@ export interface DashboardStats {
   customers: number
   conversion_rate: number
   total_deal_value: number
+  pipeline_value: number
+  weighted_forecast: number
+  this_month_value: number
+  deal_stage_values: Partial<Record<DealStage, number>>
   upcoming_reminders: number
   recent_contacts: Array<{
     id: string
@@ -91,12 +115,64 @@ export const STAGE_COLORS: Record<ContactStage, string> = {
   customer: '#10B981',
 }
 
+export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
+  new: 'Yeni',
+  qualified: 'Nitelikli',
+  proposal: 'Teklif',
+  negotiation: 'Müzakere',
+  won: 'Kazanıldı',
+  lost: 'Kaybedildi',
+}
+
+export const DEAL_STAGE_COLORS: Record<DealStage, string> = {
+  new: '#94A3B8',
+  qualified: '#60A5FA',
+  proposal: '#A78BFA',
+  negotiation: '#F59E0B',
+  won: '#10B981',
+  lost: '#EF4444',
+}
+
+export const DEAL_STAGE_PROBABILITY: Record<DealStage, number> = {
+  new: 10,
+  qualified: 25,
+  proposal: 50,
+  negotiation: 75,
+  won: 100,
+  lost: 0,
+}
+
+export const ACTIVITY_LABELS: Record<ActivityType, string> = {
+  call: 'Arama',
+  meeting: 'Toplantı',
+  email: 'E-posta',
+  note: 'Not',
+  task: 'Görev',
+}
+
+export const ACTIVITY_ICONS: Record<ActivityType, string> = {
+  call: '📞',
+  meeting: '🤝',
+  email: '✉️',
+  note: '📝',
+  task: '✅',
+}
+
 export const PIPELINE_STAGES: ContactStage[] = [
   'lead',
   'contacted',
   'met',
   'demo_sent',
   'proposal_sent',
+]
+
+export const DEAL_PIPELINE_STAGES: DealStage[] = [
+  'new',
+  'qualified',
+  'proposal',
+  'negotiation',
+  'won',
+  'lost',
 ]
 
 export interface ReminderRule {
