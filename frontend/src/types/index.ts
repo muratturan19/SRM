@@ -187,3 +187,31 @@ export interface SystemSettings {
   snooze_enabled: boolean
   snooze_days: number
 }
+
+// ── Sesli giriş (voice input) ─────────────────────────────────────
+export type VoiceIntent = 'new_contact' | 'contact_note' | 'reminder'
+
+export interface VoiceContactMatch {
+  id: string
+  name: string
+  company?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
+export interface VoiceResult {
+  transcript: string
+  intent: VoiceIntent
+  contact: Partial<Record<keyof Contact, string | null>>
+  note: {
+    target_name?: string | null
+    type?: ActivityType | null
+    content?: string | null
+  }
+  reminder: {
+    target_name?: string | null
+    title?: string | null
+    remind_at?: string | null
+  }
+  contact_matches: VoiceContactMatch[]
+}

@@ -92,9 +92,13 @@ async def list_contacts(
 
 
 @router.post("/", response_model=ContactRead, status_code=201)
-async def create_contact(data: ContactCreate, db: AsyncSession = Depends(get_db)):
-    # Duplicate detection: phone veya email zaten varsa uyar
-    if data.email or data.phone:
+async def create_contact(
+    data: ContactCreate,
+    force: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+):
+    # Duplicate detection: phone veya email zaten varsa uyar (force ile atlanır)
+    if not force and (data.email or data.phone):
         filters = []
         if data.email:
             filters.append(Contact.email == data.email)

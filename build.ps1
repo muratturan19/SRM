@@ -98,6 +98,21 @@ if (-not $SkipPyInstaller) {
 }
 
 # ── 3. Inno Setup — Setup_KolektifSRM_v{Version}.exe ─────────────────────────
+# API anahtarlarını backend\data\.env'den okuyup ortam değişkenine koy.
+# srm_setup.iss bunları GetEnv ile derleme anında pakete gömer (git'e girmez).
+$envFile = Join-Path $Backend "data\.env"
+if (Test-Path $envFile) {
+    foreach ($line in Get-Content $envFile) {
+        if ($line -match '^ANTHROPIC_API_KEY=(.*)$') { $env:SRM_ANTHROPIC_KEY = $matches[1].Trim() }
+        elseif ($line -match '^OPENAI_API_KEY=(.*)$') { $env:SRM_OPENAI_KEY = $matches[1].Trim() }
+    }
+    $akSet = if ($env:SRM_ANTHROPIC_KEY) { "DOLU" } else { "BOS" }
+    $okSet = if ($env:SRM_OPENAI_KEY) { "DOLU" } else { "BOS" }
+    Write-Host "API anahtarlari pakete gomulecek: Anthropic=$akSet, OpenAI=$okSet" -ForegroundColor Yellow
+} else {
+    Write-Host "UYARI: backend\data\.env yok — anahtarlar bos gomulecek." -ForegroundColor Yellow
+}
+
 Write-Step "Inno Setup — kurulum paketi olusturuluyor (v$Version)"
 $issFile = Join-Path $Installer "srm_setup.iss"
 & $iscc $issFile "/DMyAppVersion=$Version"

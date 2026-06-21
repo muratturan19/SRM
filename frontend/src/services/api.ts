@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Contact, Deal, Reminder, DashboardStats, SystemSettings, Activity } from '../types'
+import type { Contact, Deal, Reminder, DashboardStats, SystemSettings, Activity, VoiceResult } from '../types'
 
 const api = axios.create({ baseURL: '/api' })
 
@@ -11,8 +11,8 @@ export const contactsApi = {
   get: (id: string) =>
     api.get<Contact>(`/contacts/${id}`).then((r) => r.data),
 
-  create: (data: Partial<Contact>) =>
-    api.post<Contact>('/contacts', data).then((r) => r.data),
+  create: (data: Partial<Contact>, force = false) =>
+    api.post<Contact>(`/contacts${force ? '?force=true' : ''}`, data).then((r) => r.data),
 
   update: (id: string, data: Partial<Contact>) =>
     api.patch<Contact>(`/contacts/${id}`, data).then((r) => r.data),
@@ -117,5 +117,14 @@ export const scanApi = {
     const fd = new FormData()
     fd.append('file', file)
     return api.post<Record<string, string | null>>('/scan/card', fd).then((r) => r.data)
+  },
+}
+
+// ── Voice Input ───────────────────────────────────────────────────
+export const voiceApi = {
+  process: (blob: Blob, filename = 'voice.webm') => {
+    const fd = new FormData()
+    fd.append('file', blob, filename)
+    return api.post<VoiceResult>('/voice/process', fd).then((r) => r.data)
   },
 }

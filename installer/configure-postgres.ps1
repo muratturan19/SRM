@@ -69,6 +69,17 @@ if ($svc -and $svc.Status -ne "Running") {
 # ── 3. Veritabanını oluştur ──────────────────────────────────────────────────
 $env:PGPASSWORD = $PgPass
 
+# Yeni kurulumda PG servisi bağlantı kabul etmeye geç hazır olabilir — bekle
+$ready = $false
+for ($i = 0; $i -lt 30; $i++) {
+    & $PsqlExe -h localhost -U postgres -tAc "SELECT 1" 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+    Start-Sleep -Seconds 2
+}
+if (-not $ready) {
+    Write-Log "PostgreSQL 60sn icinde hazir olmadi — DB olusturma backend tarafindan denenecek." "Yellow"
+}
+
 $exists = & $PsqlExe -h localhost -U postgres -tAc `
     "SELECT 1 FROM pg_database WHERE datname='$DbName'" 2>$null
 

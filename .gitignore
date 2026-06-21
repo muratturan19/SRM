@@ -34,3 +34,13 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# ── Installer binaries (too large for GitHub) ───────────────────
+installer/Output/
+installer/*.exe
+installer/postgresql-*.exe
+installer/vc_redist*.exe
+
+# ── Build artifacts ─────────────────────────────────────────────
+backend/dist/
+test_card.png

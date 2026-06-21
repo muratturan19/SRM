@@ -28,6 +28,11 @@
 #define MyDataDir        "{commonappdata}\KolektifSRM"
 #define MyPort           "8010"
 
+; API anahtarları derleme anında ortam değişkenlerinden gömülür (git'e girmez).
+; build.ps1 bunları backend\data\.env'den okuyup set eder.
+#define SrmAnthropicKey GetEnv('SRM_ANTHROPIC_KEY')
+#define SrmOpenAIKey    GetEnv('SRM_OPENAI_KEY')
+
 ; Build artefaktları doğrulama
 #ifnexist "..\backend\dist\srm_backend\srm_backend.exe"
   #error "srm_backend.exe bulunamadi. Once build.ps1 calistirin."
@@ -112,17 +117,19 @@ Source: "configure-postgres.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "create-srm-env.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 ; Kaldırma sırasında DB drop için {app}'te kalır
 Source: "drop-srm-db.ps1"; DestDir: "{app}"; Flags: ignoreversion
+; Kurulum sonrası otomatik test scripti
+Source: "srm-selftest.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 ; ── Kısayollar ────────────────────────────────────────────────────────────────
 [Icons]
 Name: "{autoprograms}\{#MyAppName}\SRM Arayuzu"; Filename: "{sys}\rundll32.exe"; \
-  Parameters: "url.dll,FileProtocolHandler http://localhost:{#MyPort}"; \
+  Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
   IconFilename: "{app}\{#MyAppExeName}"
 Name: "{autoprograms}\{#MyAppName}\SRM Kur Klaosoru"; Filename: "{app}"
 Name: "{autoprograms}\{#MyAppName}\Kaldir"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; \
   Filename: "{sys}\rundll32.exe"; \
-  Parameters: "url.dll,FileProtocolHandler http://localhost:{#MyPort}"; \
+  Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
   IconFilename: "{app}\{#MyAppExeName}"; \
   Tasks: desktopicon
 
@@ -135,80 +142,82 @@ Filename: "{tmp}\vc_redist.x64.exe"; \
   StatusMsg: "Microsoft Visual C++ Redistributable yukleniyor..."; \
   Flags: waituntilterminated
 
-; 2. PostgreSQL kur + DB oluştur (taze kurulum)
+; 2. PostgreSQL kur + DB oluştur (idempotent — eksikse kurar, varsa atlar; HER ZAMAN çalışır)
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
   Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\configure-postgres.ps1"" -PgPass ""Mm3471891298"" -DbName ""kolektif360_crm"""; \
-  StatusMsg: "PostgreSQL yapılandırılıyor..."; \
-  Check: not IsUpgrade; \
+  StatusMsg: "PostgreSQL hazırlanıyor (gerekirse kuruluyor)..."; \
   Flags: runhidden waituntilterminated
 
-; 3. .env dosyasını oluştur (taze kurulum)
+; 3. .env dosyasını oluştur (zaten varsa script atlar; HER ZAMAN çalışır)
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\create-srm-env.ps1"" -DataDir ""{commonappdata}\KolektifSRM"""; \
+  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\create-srm-env.ps1"" -DataDir ""{commonappdata}\KolektifSRM"" -AnthropicKey ""{#SrmAnthropicKey}"" -OpenAIKey ""{#SrmOpenAIKey}"""; \
   StatusMsg: "Uygulama yapılandırması oluşturuluyor..."; \
-  Check: not IsUpgrade; \
   Flags: runhidden waituntilterminated
 
 ; 4. ProgramData klasörüne yazma izni ver
 Filename: "icacls.exe"; \
   Parameters: """{#MyDataDir}"" /grant ""Users:(OI)(CI)M"" /T /C"; \
   StatusMsg: "Yazma izinleri ayarlanıyor..."; \
-  Check: not IsUpgrade; \
   Flags: runhidden waituntilterminated
 
-; 5. Windows servisi kaydet (taze kurulum)
+; 5. Windows servisi kaydet (yalnızca servis yoksa — kendi kendini onarır)
 Filename: "{app}\nssm.exe"; \
   Parameters: "install {#MyServiceName} ""{app}\{#MyAppExeName}"""; \
   StatusMsg: "Windows servisi kaydediliyor..."; \
-  Check: not IsUpgrade; \
+  Check: not IsServiceInstalled; \
+  Flags: runhidden waituntilterminated
+
+; Servis ayarları (idempotent — her zaman uygulanır)
+Filename: "{app}\nssm.exe"; \
+  Parameters: "set {#MyServiceName} AppDirectory ""{app}"""; \
   Flags: runhidden waituntilterminated
 
 Filename: "{app}\nssm.exe"; \
-  Parameters: "set {#MyServiceName} AppDirectory ""{app}"""; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
-
-Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} DisplayName ""{#MyServiceLabel}"""; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
+  Flags: runhidden waituntilterminated
 
 Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} Start SERVICE_AUTO_START"; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
+  Flags: runhidden waituntilterminated
 
 Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} AppStdout ""{#MyDataDir}\logs\service_stdout.log"""; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
+  Flags: runhidden waituntilterminated
 
 Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} AppStderr ""{#MyDataDir}\logs\service_stderr.log"""; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
+  Flags: runhidden waituntilterminated
 
 Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} AppRotateFiles 1"; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
+  Flags: runhidden waituntilterminated
 
 ; SRM_DATA_DIR env → backend bu env var'dan veri dizinini bulur
 Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} AppEnvironmentExtra SRM_DATA_DIR={#MyDataDir}"; \
-  Check: not IsUpgrade; Flags: runhidden waituntilterminated
-
-; 6. Servisi başlat
-Filename: "{app}\nssm.exe"; \
-  Parameters: "start {#MyServiceName}"; \
-  StatusMsg: "KolektifSRM servisi başlatılıyor..."; \
-  Check: not IsUpgrade; \
   Flags: runhidden waituntilterminated
 
-; 7. Güncelleme: servisi yeniden başlat
+; 6. Servisi (yeniden) başlat — taze veya güncelleme farketmez (ssInstall'da durdurulmuştu)
 Filename: "{app}\nssm.exe"; \
   Parameters: "restart {#MyServiceName}"; \
-  StatusMsg: "KolektifSRM servisi yeniden başlatılıyor..."; \
-  Check: IsUpgrade and IsServiceInstalled; \
+  StatusMsg: "KolektifSRM servisi başlatılıyor..."; \
   Flags: runhidden waituntilterminated
+
+; 7. Kurulum sonrası otomatik self-test — servis ayağa kalkana kadar bekler, log oluşturur
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
+  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{app}\srm-selftest.ps1"" -DataDir ""{commonappdata}\KolektifSRM"""; \
+  StatusMsg: "Kurulum test ediliyor (servis ayağa kalkıyor, lütfen bekleyin)..."; \
+  Flags: runhidden waituntilterminated
+
+; 7b. Test sonucu logunu kullanıcıya göster
+Filename: "notepad.exe"; \
+  Parameters: """{commonappdata}\KolektifSRM\logs\selftest.log"""; \
+  Description: "Kurulum test sonucunu göster"; \
+  Flags: nowait postinstall skipifsilent
 
 ; 8. Kurulum tamamlandı — tarayıcıyı aç
 Filename: "{sys}\rundll32.exe"; \
-  Parameters: "url.dll,FileProtocolHandler http://localhost:{#MyPort}"; \
+  Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
   Description: "KolektifSRM'yi tarayıcıda aç"; \
   Flags: nowait postinstall skipifsilent
 
@@ -261,19 +270,31 @@ begin
         and (MajorVersion >= 14);
 end;
 
-procedure StopExistingService();
+procedure FullCleanup();
 var
   ResultCode: Integer;
+  NssmApp, EnvFile: String;
 begin
-  if FileExists(ExpandConstant('{tmp}\nssm.exe')) then
-    Exec(ExpandConstant('{tmp}\nssm.exe'), 'stop {#MyServiceName}', '',
-         SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  if FileExists(ExpandConstant('{app}\nssm.exe')) then
-    Exec(ExpandConstant('{app}\nssm.exe'), 'stop {#MyServiceName}', '',
-         SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  NssmApp := ExpandConstant('{app}\nssm.exe');
+  // 1) Servisi durdur
   Exec(ExpandConstant('{sys}\sc.exe'), 'stop {#MyServiceName}', '',
        SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(3000);
+  if FileExists(NssmApp) then
+    Exec(NssmApp, 'stop {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(2000);
+  // 2) Kalan process'i zorla kapat
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM {#MyAppExeName}', '',
+       SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // 3) Servisi tamamen kaldir (temiz yeniden kurulum icin)
+  if FileExists(NssmApp) then
+    Exec(NssmApp, 'remove {#MyServiceName} confirm', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{sys}\sc.exe'), 'delete {#MyServiceName}', '',
+       SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(1500);
+  // 4) Eski .env'i sil — yeni anahtar/ayarlarla taze olussun (DB ve veriler KORUNUR)
+  EnvFile := ExpandConstant('{commonappdata}\KolektifSRM\data\.env');
+  if FileExists(EnvFile) then
+    DeleteFile(EnvFile);
 end;
 
 function InitializeSetup(): Boolean;
@@ -289,5 +310,5 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssInstall then
-    StopExistingService();
+    FullCleanup();
 end;

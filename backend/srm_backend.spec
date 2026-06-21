@@ -8,8 +8,13 @@
 
 import sys
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_submodules
 
 block_cipher = None
+
+# Uygulama paketinin tüm alt modülleri (routes, services, models, schemas)
+# uvicorn string import'la çağrıldığında bundle'da bulunsun diye açıkça toplanır.
+_app_submodules = collect_submodules("app")
 
 # Frontend build dizini (npm run build sonrası oluşur)
 FRONTEND_DIST = str((Path(SPECPATH).parent / "frontend" / "dist").resolve())
@@ -86,7 +91,7 @@ a = Analysis(
         "email.mime.text",
         "email.mime.multipart",
         "dotenv",
-    ],
+    ] + _app_submodules,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

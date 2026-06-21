@@ -28,8 +28,21 @@ class Settings(BaseSettings):
     # LLM APIs
     anthropic_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    elevenlabs_api_key: Optional[str] = None
     # "claude" or "gpt" — falls back to the other if primary fails
     scan_provider: str = "claude"
+
+    # Sesli giriş (voice input)
+    # STT sağlayıcı: "openai" (gpt-4o-mini-transcribe) veya "elevenlabs" (Scribe v2)
+    voice_stt_provider: str = "openai"
+    # OpenAI güncel transkripsiyon modeli (Haz 2026; gpt-4o-transcribe & whisper-1 emekliye ayrıldı)
+    openai_transcribe_model: str = "gpt-4o-mini-transcribe"
+    # ElevenLabs Scribe model id
+    elevenlabs_stt_model: str = "scribe_v1"
+    # Niyet/alan çıkarımı — birincil Claude, yedek GPT (kartvizit tarama ile aynı desen)
+    voice_llm_provider: str = "claude"
+    voice_llm_model: str = "claude-sonnet-4-6"
+    voice_llm_fallback_model: str = "gpt-5.5"
 
     # Veri dizini (uploads, logs, backups) — .env'den override edilebilir
     data_dir: str = str(_DATA_DIR)

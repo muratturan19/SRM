@@ -6,6 +6,31 @@ Versiyon: [Semantic Versioning](https://semver.org/lang/tr/)
 
 ---
 
+## [1.3.0] — 2026-06-19
+
+### Eklendi
+- **Sesli Giriş (Voice Input):** Üst bardaki "Sesli Giriş" butonuyla konuşarak kayıt oluşturma. Yapay zeka, ne söylendiğini anlayıp doğru yere yazar; kaydetmeden önce her şey gözden geçirilip düzenlenebilir.
+  - **Niyet algılama:** Tek bir konuşmadan üç işlemden biri otomatik seçilir — **yeni kişi**, **mevcut kişiye görüşme notu/aktivite**, veya **hatırlatıcı**. Algılanan işlem gözden geçirme ekranından değiştirilebilir.
+  - **Yeni kişi:** Ad, şirket, ünvan, e-posta, telefon vb. alanlar otomatik dolar. Sözle söylenen telefon ("sıfır beş üç iki…") rakama, "at/nokta" e-posta adresine çevrilir; telefon `+90 …` formatına normalize edilir.
+  - **Görüşme notu:** Bahsedilen kişi mevcut kayıtlarla eşleştirilir (seçilebilir), görüşme türü (arama/toplantı/e-posta/not/görev) ve özet otomatik belirlenir.
+  - **Hatırlatıcı:** Türkçe göreli tarih/saat ("yarın 15:00", "salı günü") otomatik çözülür; tarih-saat seçiciden düzeltilebilir.
+  - **Ses → metin (STT):** OpenAI `gpt-4o-mini-transcribe` (Haziran 2026 güncel modeli; `gpt-4o-transcribe` ve `whisper-1` emekliye ayrıldı). ElevenLabs Scribe alternatifi config'den seçilebilir.
+  - **Metin → yapılandırılmış veri:** Claude Sonnet 4.6 (birincil) → GPT-5.5 (yedek); kartvizit taramayla aynı dayanıklılık deseni.
+  - Tarayıcıda kayıt MediaRecorder API ile yapılır; ham ses backend'e gönderilir.
+
+### Düzeltildi
+- **Kişi "Yine de Kaydet" akışı:** Çift kayıt uyarısında "Yine de Kaydet" düğmesi, `force` parametresi eklenerek artık gerçekten kaydediyor (önceden tekrar 409 hatası döngüsüne giriyordu).
+- **Paketleme hatası (kurulu .exe açılmıyordu):** `run.py` uvicorn'a `"app.main:app"` metnini veriyordu; PyInstaller metin-import'unu göremediği için `app` paketi pakete dahil edilmiyor, exe açılışta `ModuleNotFoundError` ile çöküyordu. Frozen modda app nesnesi doğrudan import ediliyor + spec'e `collect_submodules("app")` eklendi. (1.0.0'dan beri var olan gizli hata.)
+- **Veritabanı yarış durumu (`database does not exist`):** Backend açılışta PostgreSQL hazır olana kadar bekliyor ve hedef veritabanı yoksa kendisi oluşturuyor. Temiz makinede (PG yeni kurulurken) DB'nin oluşmaması ve boot'ta PG'nin geç açılması sorunları kalıcı çözüldü.
+
+### Kurulum (Installer)
+- **Sesli giriş anahtarları pakete gömülüyor:** API anahtarları derleme anında `backend/data/.env`'den okunup Setup.exe'ye gömülür (git'e girmez); kurulumda `.env` dolu gelir.
+- **Kendi kendini onaran kurulum:** Adımlar artık "güncelleme" sayılınca atlanmıyor; eksik PostgreSQL/servis/.env varsa kurulur. Kurulumdan önce eski servis+`.env` tamamen temizlenir (DB ve veriler korunur).
+- **Kurulum sonrası otomatik test + log:** Kurulum biter bitmez self-test çalışır (servis, PG, anahtarlar, sağlık kontrolü) ve sonucu `logs/selftest.log` + Masaüstü'ne yazıp Not Defteri'nde açar.
+- Kısayollar ve tarayıcı açma `localhost` yerine `127.0.0.1` kullanır (IPv6 belirsizliğini önler).
+
+---
+
 ## [1.2.1] — 2026-05-19
 
 ### Eklendi

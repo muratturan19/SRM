@@ -1,9 +1,10 @@
-# Kolektif360 SRM v1.2.0
+# Kolektif360 SRM v1.3.0
 
 **S**elin **R**elations **M**anagement — Modern, hafif müşteri ilişkileri yönetim sistemi.
 
 ## Özellikler
 
+- 🎤 **Sesli Giriş** — Konuşarak yeni kişi, görüşme notu veya hatırlatıcı oluşturma; yapay zeka niyeti anlayıp doğru yere yazar, kaydetmeden önce gözden geçirilir
 - 📇 **Kartvizit Tarama** — Claude Sonnet 4.6 veya GPT-5.5 vision ile otomatik veri doldurma
 - 🗂️ **Pipeline Kanban** — Sürükle-bırak ile lead'den müşteriye geçiş
 - ✅ **Temas Aşamaları** — Temas/Görüşme/Tanıtım/Teklif checkbox takibi
@@ -73,15 +74,19 @@ Frontend `http://localhost:5173` adresinde açılır.
 
 ---
 
-### 4. Kartvizit Tarama Ayarı
+### 4. Kartvizit Tarama & Sesli Giriş Ayarı
 
 `backend/data/.env` dosyasına API anahtarlarını ekleyin:
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-...   # Claude Sonnet 4.6
-OPENAI_API_KEY=sk-...          # GPT-5.5 (yedek)
-SCAN_PROVIDER=claude           # Varsayılan: claude
+ANTHROPIC_API_KEY=sk-ant-...   # Claude Sonnet 4.6 (kartvizit + sesli giriş çıkarımı)
+OPENAI_API_KEY=sk-...          # GPT-5.5 yedek + sesli giriş STT (gpt-4o-mini-transcribe)
+SCAN_PROVIDER=claude           # Kartvizit: varsayılan claude
+VOICE_STT_PROVIDER=openai      # Sesli giriş ses→metin: openai | elevenlabs
+# ELEVENLABS_API_KEY=...       # (opsiyonel) en yüksek Türkçe STT doğruluğu için
 ```
+
+> Sesli giriş için tarayıcının mikrofon iznini vermesi gerekir (ilk kullanımda sorulur).
 
 ---
 
@@ -93,12 +98,14 @@ Backend çalışırken hatırlatıcı zamanı geldiğinde:
 
 ---
 
-## LLM Modelleri (Mayıs 2026)
+## LLM Modelleri (Haziran 2026)
 
 | Model | Kullanım | Fiyat |
 |-------|----------|-------|
-| `claude-sonnet-4-6` | Kartvizit tarama (birincil) | $3/M input |
-| `gpt-5.5` (Responses API) | Kartvizit tarama (yedek) | $5/M input |
+| `claude-sonnet-4-6` | Kartvizit tarama + sesli giriş çıkarımı (birincil) | $3/M input |
+| `gpt-5.5` (Responses API) | Kartvizit tarama + sesli giriş çıkarımı (yedek) | $5/M input |
+| `gpt-4o-mini-transcribe` | Sesli giriş ses→metin (STT) | ~$0.003/dk |
+| `scribe_v1` (ElevenLabs, ops.) | Sesli giriş STT alternatifi (en iyi Türkçe) | ~$0.0067/dk |
 
 ---
 
@@ -108,17 +115,18 @@ Backend çalışırken hatırlatıcı zamanı geldiğinde:
 SRM/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/     # contacts, deals, activities, reminders, scan, dashboard
-│   │   ├── core/           # config, database
+│   │   ├── api/routes/     # contacts, deals, activities, reminders, scan, voice, dashboard
+│   │   ├── core/           # config, database, phone_utils
 │   │   ├── models/         # SQLAlchemy modelleri (contact, deal, activity, reminder)
 │   │   ├── schemas/        # Pydantic şemaları
-│   │   └── services/       # card_scanner, reminder_scheduler
+│   │   └── services/       # card_scanner, voice_processor, reminder_scheduler
 │   ├── data/.env           # Ayarlar (versiyon kontrolüne girmesin!)
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── pages/          # Dashboard, Contacts, ContactDetail, Pipeline, Customers, Reminders
-│       ├── components/     # Layout, Sidebar, CardScannerModal, ActivityTimeline, ReminderPopup
+│       ├── pages/          # Dashboard, Contacts, ContactDetail, Pipeline, Customers, Reminders, Settings
+│       ├── components/     # Layout, Sidebar, CardScannerModal, VoiceInputModal, ActivityTimeline, ReminderPopup
+│       ├── hooks/          # useAudioRecorder (MediaRecorder ses kaydı)
 │       ├── services/       # API client
 │       └── theme/          # Kolektif360 marka teması
 └── CHANGELOG.md

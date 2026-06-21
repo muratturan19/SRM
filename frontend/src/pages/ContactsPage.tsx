@@ -115,7 +115,8 @@ export default function ContactsPage() {
   })
 
   const createMut = useMutation({
-    mutationFn: contactsApi.create,
+    mutationFn: (vars: { data: ContactFormValues; force?: boolean }) =>
+      contactsApi.create(vars.data, vars.force),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contacts'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -418,7 +419,7 @@ export default function ContactsPage() {
           <Button onClick={() => setAddOpen(false)}>İptal</Button>
           <Button
             variant="contained"
-            onClick={handleSubmit((data) => { setPendingCreate(data); createMut.mutate(data) })}
+            onClick={handleSubmit((data) => { setPendingCreate(data); createMut.mutate({ data }) })}
             disabled={createMut.isPending}
           >
             Kaydet
@@ -458,7 +459,7 @@ export default function ContactsPage() {
             variant="contained"
             color="warning"
             onClick={() => {
-              if (pendingCreate) createMut.mutate(pendingCreate)
+              if (pendingCreate) createMut.mutate({ data: pendingCreate, force: true })
               setDuplicates(null)
             }}
           >
