@@ -53,13 +53,19 @@ async def due_reminders(db: AsyncSession = Depends(get_db)):
     return [_enrich(r) for r in rows]
 
 
+async def _load_reminder(db: AsyncSession, reminder_id) -> Reminder:
+    r = await db.execute(
+        select(Reminder).options(selectinload(Reminder.contact)).where(Reminder.id == reminder_id)
+    )
+    return r.scalar_one()
+
+
 @router.post("/", response_model=ReminderRead, status_code=201)
 async def create_reminder(data: ReminderCreate, db: AsyncSession = Depends(get_db)):
     reminder = Reminder(**data.model_dump())
     db.add(reminder)
     await db.flush()
-    await db.refresh(reminder)
-    return _enrich(reminder)
+    return _enrich(await _load_reminder(db, reminder.id))
 
 
 @router.patch("/{reminder_id}", response_model=ReminderRead)
@@ -75,8 +81,7 @@ async def update_reminder(
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(reminder, field, value)
     await db.flush()
-    await db.refresh(reminder)
-    return _enrich(reminder)
+    return _enrich(await _load_reminder(db, reminder.id))
 
 
 @router.delete("/{reminder_id}", status_code=204)
