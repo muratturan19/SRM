@@ -16,6 +16,7 @@ from app.schemas.contact import ContactCreate, ContactUpdate, ContactRead, Conta
 from app.schemas.deal import DealRead
 from app.schemas.reminder import ReminderRead
 from app.core.phone_utils import normalize_phone
+from app.core.config import settings
 import os
 import shutil
 

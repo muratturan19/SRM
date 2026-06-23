@@ -1,0 +1,62 @@
+services:
+  srm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: srm
+    environment:
+      - PORTAL_URL=https://portal.kolektif360.com
+      - PORTAL_ISSUER=https://portal.kolektif360.com
+      - PORTAL_APP_SLUG=srm
+      - DATABASE_HOST=srm-postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=${DB_PASSWORD}
+      - SCAN_PROVIDER=claude
+      - VOICE_LLM_PROVIDER=claude
+    volumes:
+      - srm_uploads:/app/uploads
+    restart: unless-stopped
+    depends_on:
+      srm-postgres:
+        condition: service_healthy
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.srm.rule=Host(`srm.kolektif360.com`)"
+      - "traefik.http.routers.srm.entrypoints=websecure"
+      - "traefik.http.routers.srm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.srm.loadbalancer.server.port=8000"
+      - "traefik.http.routers.srm-http.rule=Host(`srm.kolektif360.com`)"
+      - "traefik.http.routers.srm-http.entrypoints=web"
+      - "traefik.http.routers.srm-http.middlewares=srm-https-redirect"
+      - "traefik.http.middlewares.srm-https-redirect.redirectscheme.scheme=https"
+      # portal-auth EKLEME — SSO akışını kırar
+
+  srm-postgres:
+    image: postgres:15
+    container_name: srm-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=postgres
+    volumes:
+      - srm_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  srm_uploads:
+  srm_pgdata:
+
+networks:
+  web:
+    external: true

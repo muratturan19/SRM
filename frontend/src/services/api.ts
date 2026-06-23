@@ -6,13 +6,13 @@ const api = axios.create({ baseURL: '/api' })
 // ── Contacts ──────────────────────────────────────────────────────
 export const contactsApi = {
   list: (params?: { search?: string; stage?: string; tags?: string; no_contact_days?: number }) =>
-    api.get<Contact[]>('/contacts', { params }).then((r) => r.data),
+    api.get<Contact[]>('/contacts/', { params }).then((r) => r.data),
 
   get: (id: string) =>
     api.get<Contact>(`/contacts/${id}`).then((r) => r.data),
 
   create: (data: Partial<Contact>, force = false) =>
-    api.post<Contact>(`/contacts${force ? '?force=true' : ''}`, data).then((r) => r.data),
+    api.post<Contact>(force ? '/contacts/?force=true' : '/contacts/', data).then((r) => r.data),
 
   update: (id: string, data: Partial<Contact>) =>
     api.patch<Contact>(`/contacts/${id}`, data).then((r) => r.data),
@@ -43,13 +43,13 @@ export const contactsApi = {
 
 // ── Deals ─────────────────────────────────────────────────────────
 export const dealsApi = {
-  list: () => api.get<Deal[]>('/deals').then((r) => r.data),
+  list: () => api.get<Deal[]>('/deals/').then((r) => r.data),
 
   byContact: (contactId: string) =>
     api.get<Deal[]>(`/deals/contact/${contactId}`).then((r) => r.data),
 
   create: (data: Partial<Deal> & { contact_id: string }) =>
-    api.post<Deal>('/deals', data).then((r) => r.data),
+    api.post<Deal>('/deals/', data).then((r) => r.data),
 
   update: (id: string, data: Partial<Deal>) =>
     api.patch<Deal>(`/deals/${id}`, data).then((r) => r.data),
@@ -69,7 +69,7 @@ export const activitiesApi = {
     api.get<Activity[]>(`/activities/contact/${contactId}`, { params: type ? { type } : undefined }).then((r) => r.data),
 
   create: (data: Partial<Activity> & { contact_id: string }) =>
-    api.post<Activity>('/activities', data).then((r) => r.data),
+    api.post<Activity>('/activities/', data).then((r) => r.data),
 
   update: (id: string, data: Partial<Activity>) =>
     api.patch<Activity>(`/activities/${id}`, data).then((r) => r.data),
@@ -81,13 +81,13 @@ export const activitiesApi = {
 export const remindersApi = {
   list: (includeDone = false) =>
     api
-      .get<Reminder[]>('/reminders', { params: { include_done: includeDone } })
+      .get<Reminder[]>('/reminders/', { params: { include_done: includeDone } })
       .then((r) => r.data),
 
   due: () => api.get<Reminder[]>('/reminders/due').then((r) => r.data),
 
   create: (data: Partial<Reminder>) =>
-    api.post<Reminder>('/reminders', data).then((r) => r.data),
+    api.post<Reminder>('/reminders/', data).then((r) => r.data),
 
   update: (id: string, data: Partial<Reminder>) =>
     api.patch<Reminder>(`/reminders/${id}`, data).then((r) => r.data),

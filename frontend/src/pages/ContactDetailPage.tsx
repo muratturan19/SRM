@@ -10,11 +10,13 @@ import {
 import {
   ArrowBack, Edit, Add, Delete, UploadFile,
   Email, Phone, LinkedIn, Language, LocationOn, Map, Timeline,
+  Mic, Stop, GraphicEq,
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import dayjs from 'dayjs'
-import { contactsApi, dealsApi, remindersApi, activitiesApi } from '../services/api'
+import { contactsApi, dealsApi, remindersApi, activitiesApi, voiceApi } from '../services/api'
+import { useAudioRecorder } from '../hooks/useAudioRecorder'
 import { STAGE_LABELS, STAGE_COLORS } from '../types'
 import type { Contact, Deal, Reminder, Activity } from '../types'
 import ContactFormFields from '../components/ContactForm'
@@ -39,6 +41,8 @@ export default function ContactDetailPage() {
   const [reminderOpen, setReminderOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [noteText, setNoteText] = useState('')
+  const [transcribing, setTranscribing] = useState(false)
+  const { recording, start: startRec, stop: stopRec } = useAudioRecorder()
   const [_contractDealId, setContractDealId] = useState<string | null>(null)
 
   const { data: contact, isLoading } = useQuery({
@@ -61,6 +65,26 @@ export default function ContactDetailPage() {
       setNoteText('')
     },
   })
+
+  const handleVoiceNote = async () => {
+    if (recording) {
+      const blob = await stopRec()
+      if (!blob) return
+      setTranscribing(true)
+      try {
+        const result = await voiceApi.process(blob)
+        if (result.transcript) {
+          setNoteText((prev) => prev ? prev + ' ' + result.transcript : result.transcript)
+        }
+      } catch {
+        // ignore STT errors silently
+      } finally {
+        setTranscribing(false)
+      }
+    } else {
+      startRec()
+    }
+  }
 
   const deleteNoteMut = useMutation({
     mutationFn: (actId: string) => activitiesApi.delete(actId),
@@ -524,7 +548,7 @@ export default function ContactDetailPage() {
         </Card>
 
         {/* Note Dialog */}
-        <Dialog open={noteOpen} onClose={() => { setNoteOpen(false); setNoteText('') }} maxWidth="sm" fullWidth>
+        <Dialog open={noteOpen} onClose={() => { setNoteOpen(false); setNoteText(''); }} maxWidth="sm" fullWidth>
           <DialogTitle>Görüşme Notu Ekle</DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
             <TextField
@@ -537,6 +561,32 @@ export default function ContactDetailPage() {
               placeholder="Bugünkü görüşmede neler konuşuldu..."
               autoFocus
             />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              <Tooltip title={recording ? 'Kaydı durdur ve metne çevir' : 'Sesli dikte et'}>
+                <IconButton
+                  onClick={handleVoiceNote}
+                  color={recording ? 'error' : 'primary'}
+                  disabled={transcribing}
+                >
+                  {transcribing ? (
+                    <CircularProgress size={22} />
+                  ) : recording ? (
+                    <Stop />
+                  ) : (
+                    <Mic />
+                  )}
+                </IconButton>
+              </Tooltip>
+              {recording && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <GraphicEq color="error" fontSize="small" />
+                  <Typography variant="caption" color="error">Kayıt yapılıyor…</Typography>
+                </Box>
+              )}
+              {transcribing && (
+                <Typography variant="caption" color="text.secondary">Metne çevriliyor…</Typography>
+              )}
+            </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => { setNoteOpen(false); setNoteText('') }}>İptal</Button>

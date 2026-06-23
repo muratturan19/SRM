@@ -1,95 +1,62 @@
 import os
-import sys
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import Base
 from app.api.routes import contacts, deals, reminders, scan, dashboard, backup, activities, voice
 from app.api.routes import settings_route
-import app.models.settings  # ensure SystemSettings table is created by create_all
-import app.models.activity   # ensure activities table is created by create_all
+from app.api.sso import router as sso_router
+import app.models.settings
+import app.models.activity
 from app.services.reminder_scheduler import start_scheduler, stop_scheduler
 
 
 def _find_frontend_static() -> Path | None:
-    """
-    Üretimde (frozen): PyInstaller _MEIPASS/static/
-    Geliştirmede: frontend/dist/ (varsa)
-    """
-    if getattr(sys, "frozen", False):
-        p = Path(sys._MEIPASS) / "static"  # type: ignore[attr-defined]
+    """Docker: /frontend/dist  |  Dev: bulunamazsa None (Vite ayrı çalışır)."""
+    override = os.getenv("FRONTEND_DIST_DIR")
+    if override:
+        p = Path(override)
         return p if p.is_dir() else None
-    # Dev: repo kökü / frontend / dist
-    p = (Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "dist")
+    p = Path("/frontend/dist")
+    if p.is_dir():
+        return p
+    p = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
     return p if p.is_dir() else None
 
 
 logger = logging.getLogger(__name__)
 
 
-async def _ensure_database_ready(max_attempts: int = 30, delay: float = 2.0) -> None:
-    """
-    PostgreSQL servisi (özellikle Windows boot'unda veya kurulumdan hemen sonra)
-    bağlantı kabul etmeye geç hazır olabilir ve hedef veritabanı henüz oluşmamış
-    olabilir. 'postgres' bakım veritabanına bağlanıp PG hazır olana kadar bekler,
-    hedef veritabanı yoksa oluşturur. Böylece servis hem kurulumda hem de her
-    açılışta kendi kendine toparlanır (installer'daki yarış durumuna bağımlı kalmaz).
-    """
-    import asyncpg
-    from sqlalchemy.engine.url import make_url
-
-    url = make_url(settings.database_url)
-    target_db = url.database
-    host = url.host or "localhost"
-    port = url.port or 5432
-
-    last_err = None
-    for attempt in range(1, max_attempts + 1):
-        try:
-            conn = await asyncpg.connect(
-                host=host, port=port, user=url.username,
-                password=url.password, database="postgres",
-            )
-            try:
-                exists = await conn.fetchval(
-                    "SELECT 1 FROM pg_database WHERE datname=$1", target_db
-                )
-                if not exists:
-                    await conn.execute(f'CREATE DATABASE "{target_db}"')
-                    logger.info("Veritabanı oluşturuldu: %s", target_db)
-            finally:
-                await conn.close()
-            return
-        except Exception as exc:  # noqa: BLE001 — PG hazır değil / geçici hata
-            last_err = exc
-            logger.warning(
-                "PostgreSQL hazır değil (deneme %d/%d): %s", attempt, max_attempts, exc
-            )
-            await asyncio.sleep(delay)
-
-    raise RuntimeError(
-        f"PostgreSQL'e bağlanılamadı veya veritabanı oluşturulamadı: {last_err}"
-    )
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── Startup ──────────────────────────────────────────────────
     os.makedirs(settings.upload_dir, exist_ok=True)
-    os.makedirs(Path(settings.data_dir) / "backups", exist_ok=True)
-    # PG hazır olana kadar bekle + hedef DB yoksa oluştur
-    await _ensure_database_ready()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    import asyncpg
+    for attempt in range(30):
+        try:
+            conn = await asyncpg.connect(
+                host=settings.database_host,
+                port=settings.database_port,
+                user=settings.database_user,
+                password=settings.database_password,
+                database="postgres",
+            )
+            await conn.close()
+            break
+        except Exception as exc:
+            logger.warning("PostgreSQL hazır değil (%d/30): %s", attempt + 1, exc)
+            import asyncio
+            await asyncio.sleep(2)
+    else:
+        raise RuntimeError("PostgreSQL'e bağlanılamadı.")
     start_scheduler()
     yield
-    # ── Shutdown ─────────────────────────────────────────────────
     stop_scheduler()
 
 
@@ -97,6 +64,7 @@ app = FastAPI(
     title=settings.app_name,
     version="1.3.0",
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 app.add_middleware(
@@ -107,13 +75,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure uploads directory exists before mounting static files
 os.makedirs(settings.upload_dir, exist_ok=True)
-
-# Serve uploaded files
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
-# ── Routers ───────────────────────────────────────────────────────
+# SSO — auth gerektirmeyen tek endpoint
+app.include_router(sso_router, prefix="/api")
+
+# API route'ları
 app.include_router(contacts.router, prefix="/api/contacts", tags=["contacts"])
 app.include_router(deals.router, prefix="/api/deals", tags=["deals"])
 app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"])
@@ -130,10 +98,29 @@ async def health():
     return {"status": "ok", "app": settings.app_name, "version": "1.3.0"}
 
 
-# ── Frontend (SPA) — EN SON mount edilmeli ────────────────────────
-# Üretimde: PyInstaller paketinden gelen dist/
-# Geliştirmede: frontend/dist/ build edilmişse serve eder, yoksa atlar
+# Frontend SPA — SADECE /assets prefix'i mount edilir.
+# Diğer tüm bilinmeyen path'ler exception handler'a düşer.
 _static = _find_frontend_static()
 if _static:
-    app.mount("/", StaticFiles(directory=str(_static), html=True), name="frontend")
+    _assets_dir = _static / "assets"
+    if _assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_assets_dir)), name="assets")
 
+
+@app.exception_handler(StarletteHTTPException)
+async def _spa_fallback(request: Request, exc: StarletteHTTPException):
+    """
+    404 → API dışı path'ler için index.html (React Router devralır).
+          /api/* ve /uploads/* için normal JSON hata döner.
+    """
+    if exc.status_code == 404 and _static:
+        path = request.url.path
+        if not path.startswith("/api/") and not path.startswith("/uploads/") and not path.startswith("/assets/"):
+            # favicon, manifest gibi gerçek dosyaları dene
+            filename = path.lstrip("/")
+            if filename:
+                candidate = _static / filename
+                if candidate.is_file():
+                    return FileResponse(str(candidate))
+            return FileResponse(str(_static / "index.html"))
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)

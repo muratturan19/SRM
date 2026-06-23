@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
+from app.core.auth import get_access_token
 from app.core.database import get_db
 from app.core.phone_utils import normalize_phone
 from app.models.contact import Contact
@@ -44,6 +45,7 @@ async def _match_contacts(db: AsyncSession, name: str | None, limit: int = 5) ->
 async def process_voice(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    token: str = Depends(get_access_token),
 ):
     audio = await file.read()
     if not audio:
@@ -55,7 +57,7 @@ async def process_voice(
 
     # ① Transkripsiyon
     try:
-        transcript = voice_processor.transcribe(audio, filename)
+        transcript = voice_processor.transcribe(audio, filename, token=token)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=f"Ses metne çevrilemedi: {exc}")
 
@@ -64,7 +66,7 @@ async def process_voice(
 
     # ② Niyet + alan çıkarımı
     try:
-        result = voice_processor.extract(transcript)
+        result = voice_processor.extract(transcript, token=token)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=f"Metin çözümlenemedi: {exc}")
 
