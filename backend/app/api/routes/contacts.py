@@ -63,7 +63,7 @@ async def list_contacts(
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(Contact)
+    q = select(Contact).options(selectinload(Contact.deals))
     if search:
         term = f"%{search}%"
         q = q.where(
