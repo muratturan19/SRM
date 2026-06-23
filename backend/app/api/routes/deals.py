@@ -2,6 +2,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.deal import Deal
 from app.models.contact import Contact
@@ -15,13 +16,17 @@ router = APIRouter()
 
 @router.get("/", response_model=list[DealRead])
 async def list_deals(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Deal).order_by(Deal.created_at.desc()))
+    result = await db.execute(
+        select(Deal).options(selectinload(Deal.contact)).order_by(Deal.created_at.desc())
+    )
     return result.scalars().all()
 
 
 @router.get("/contact/{contact_id}", response_model=list[DealRead])
 async def deals_by_contact(contact_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Deal).where(Deal.contact_id == contact_id))
+    result = await db.execute(
+        select(Deal).options(selectinload(Deal.contact)).where(Deal.contact_id == contact_id)
+    )
     return result.scalars().all()
 
 

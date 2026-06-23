@@ -6,6 +6,14 @@ from pydantic import BaseModel, ConfigDict
 from app.models.deal import DealStage
 
 
+class ContactSummary(BaseModel):
+    id: uuid.UUID
+    name: str
+    company: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DealBase(BaseModel):
     product_name: str
     amount: Optional[Decimal] = None
@@ -36,5 +44,6 @@ class DealRead(DealBase):
     contract_pdf_path: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    contact: Optional[ContactSummary] = None
 
     model_config = ConfigDict(from_attributes=True)

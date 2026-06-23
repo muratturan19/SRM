@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.reminder import Reminder
 from app.models.contact import Contact
@@ -24,7 +25,7 @@ async def list_reminders(
     include_done: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(Reminder).order_by(Reminder.remind_at)
+    q = select(Reminder).options(selectinload(Reminder.contact)).order_by(Reminder.remind_at)
     if not include_done:
         q = q.where(Reminder.is_done == False)
     result = await db.execute(q)
@@ -38,6 +39,7 @@ async def due_reminders(db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     q = (
         select(Reminder)
+        .options(selectinload(Reminder.contact))
         .where(Reminder.remind_at <= now)
         .where(Reminder.is_done == False)
         .where(Reminder.notified == False)
@@ -113,5 +115,8 @@ async def snooze_reminder(reminder_id: uuid.UUID, db: AsyncSession = Depends(get
     )
     db.add(snoozed)
     await db.flush()
-    await db.refresh(snoozed)
-    return _enrich(snoozed)
+    # Re-fetch with contact to avoid lazy-load in async context
+    result2 = await db.execute(
+        select(Reminder).options(selectinload(Reminder.contact)).where(Reminder.id == snoozed.id)
+    )
+    return _enrich(result2.scalar_one())
