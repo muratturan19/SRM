@@ -130,9 +130,13 @@ function Column({
           flexGrow: 1,
           minHeight: 120,
           p: 1,
-          bgcolor: isOver ? 'action.hover' : 'background.default',
-          borderColor: isOver ? 'primary.main' : 'divider',
-          borderStyle: 'dashed',
+          bgcolor: isOver
+            ? (stage === 'customer' ? 'success.lighter' : 'action.hover')
+            : (stage === 'customer' ? 'success.50' : 'background.default'),
+          borderColor: isOver
+            ? (stage === 'customer' ? 'success.main' : 'primary.main')
+            : (stage === 'customer' ? 'success.light' : 'divider'),
+          borderStyle: stage === 'customer' ? 'solid' : 'dashed',
           transition: 'all 0.15s',
         }}
       >
@@ -147,10 +151,10 @@ function Column({
         {contacts.length === 0 && (
           <Typography
             variant="caption"
-            color="text.secondary"
+            color={stage === 'customer' ? 'success.main' : 'text.secondary'}
             sx={{ display: 'block', textAlign: 'center', mt: 3 }}
           >
-            Boş
+            {stage === 'customer' ? 'Buraya sürükle → Müşteri' : 'Boş'}
           </Typography>
         )}
       </Paper>
@@ -268,9 +272,10 @@ export default function PipelinePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
   })
 
-  // Group contacts by stage (exclude customers — they have their own page)
+  // Group contacts by stage (including customer — shown as final column)
+  const ALL_CONTACT_STAGES: ContactStage[] = [...PIPELINE_STAGES, 'customer']
   const byStage: Record<ContactStage, Contact[]> = {} as Record<ContactStage, Contact[]>
-  PIPELINE_STAGES.forEach((s) => {
+  ALL_CONTACT_STAGES.forEach((s) => {
     byStage[s] = contacts.filter((c) => c.stage === s)
   })
 
@@ -292,7 +297,7 @@ export default function PipelinePage() {
     if (!overId.startsWith('deal-')) {
       const newStage = overId as ContactStage
       const contact = contacts.find((c) => c.id === String(active.id))
-      if (contact && contact.stage !== newStage && PIPELINE_STAGES.includes(newStage)) {
+      if (contact && contact.stage !== newStage && ALL_CONTACT_STAGES.includes(newStage)) {
         updateMut.mutate({ id: contact.id, stage: newStage })
       }
     }
@@ -331,7 +336,7 @@ export default function PipelinePage() {
           <Box sx={{ overflowX: 'auto', pb: 2 }}>
             <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
               <Box sx={{ display: 'flex', gap: 2, minWidth: 'max-content' }}>
-                {PIPELINE_STAGES.map((stage) => (
+                {ALL_CONTACT_STAGES.map((stage) => (
                   <Column key={stage} stage={stage} contacts={byStage[stage]} />
                 ))}
               </Box>
