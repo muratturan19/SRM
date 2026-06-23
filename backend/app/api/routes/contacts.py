@@ -25,6 +25,14 @@ router = APIRouter()
 MILESTONE_FIELDS = ("is_contacted", "is_met", "is_demo_sent", "is_proposal_sent")
 
 
+async def _fetch_with_deals(db: AsyncSession, contact_id) -> Contact:
+    """ContactRead.deals alanı için eager-load gerekli — refresh sonrası kullan."""
+    r = await db.execute(
+        select(Contact).options(selectinload(Contact.deals)).where(Contact.id == contact_id)
+    )
+    return r.scalar_one()
+
+
 async def _auto_reminders(db: AsyncSession, contact: Contact, changed_to_true: list[str]) -> None:
     """Create auto-reminders based on active SystemSettings rules."""
     if not changed_to_true:
@@ -121,8 +129,7 @@ async def create_contact(
     contact = Contact(**data.model_dump())
     db.add(contact)
     await db.flush()
-    await db.refresh(contact)
-    return contact
+    return await _fetch_with_deals(db, contact.id)
 
 
 @router.get("/{contact_id}", response_model=ContactReadWithRelations)
@@ -166,8 +173,7 @@ async def update_contact(
 
     await _auto_reminders(db, contact, changed_to_true)
     await db.flush()
-    await db.refresh(contact)
-    return contact
+    return await _fetch_with_deals(db, contact.id)
 
 
 @router.delete("/{contact_id}", status_code=204)
@@ -201,8 +207,7 @@ async def upload_avatar(
 
     contact.avatar_path = f"/uploads/{filename}"
     await db.flush()
-    await db.refresh(contact)
-    return contact
+    return await _fetch_with_deals(db, contact.id)
 
 
 # ── CSV Export ────────────────────────────────────────────────────────────────
