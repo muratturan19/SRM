@@ -68,7 +68,7 @@ async def list_contacts(
     tags: Optional[str] = Query(None),
     no_contact_days: Optional[int] = Query(None, ge=1),
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 5000,
     db: AsyncSession = Depends(get_db),
 ):
     q = select(Contact).options(selectinload(Contact.deals))

@@ -78,7 +78,8 @@ CloseApplications=yes
 CloseApplicationsFilter={#MyAppExeName}
 RestartApplications=no
 UsePreviousAppDir=yes
-UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayIcon={app}\srm.ico
+SetupIconFile=srm.ico
 SetupLogging=yes
 ChangesEnvironment=no
 DisableReadyMemo=no
@@ -87,8 +88,6 @@ DisableWelcomePage=no
 [Languages]
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 
-[Tasks]
-Name: "desktopicon"; Description: "Masaustu kisayolu olustur"; GroupDescription: "Kisayollar:"; Flags: unchecked
 
 ; ── Dizinler ──────────────────────────────────────────────────────────────────
 ; {app}         = Program Files\KolektifSRM  → sadece binary (salt okunur)
@@ -119,19 +118,21 @@ Source: "create-srm-env.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "drop-srm-db.ps1"; DestDir: "{app}"; Flags: ignoreversion
 ; Kurulum sonrası otomatik test scripti
 Source: "srm-selftest.ps1"; DestDir: "{app}"; Flags: ignoreversion
+; Markalı uygulama ikonu (kısayollar için)
+Source: "srm.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 ; ── Kısayollar ────────────────────────────────────────────────────────────────
 [Icons]
-Name: "{autoprograms}\{#MyAppName}\SRM Arayuzu"; Filename: "{sys}\rundll32.exe"; \
+Name: "{autoprograms}\{#MyAppName}\Kolektif360 SRM"; Filename: "{sys}\rundll32.exe"; \
   Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
-  IconFilename: "{app}\{#MyAppExeName}"
-Name: "{autoprograms}\{#MyAppName}\SRM Kur Klaosoru"; Filename: "{app}"
+  IconFilename: "{app}\srm.ico"
+Name: "{autoprograms}\{#MyAppName}\SRM Kurulum Klasoru"; Filename: "{app}"
 Name: "{autoprograms}\{#MyAppName}\Kaldir"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; \
+; Masaüstü kısayolu — her zaman oluşturulur
+Name: "{autodesktop}\Kolektif360 SRM"; \
   Filename: "{sys}\rundll32.exe"; \
   Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
-  IconFilename: "{app}\{#MyAppExeName}"; \
-  Tasks: desktopicon
+  IconFilename: "{app}\srm.ico"
 
 ; ── Kurulum adımları ──────────────────────────────────────────────────────────
 [Run]
@@ -295,6 +296,10 @@ begin
   EnvFile := ExpandConstant('{commonappdata}\KolektifSRM\data\.env');
   if FileExists(EnvFile) then
     DeleteFile(EnvFile);
+  // 5) Eski kisayollari temizle (onceki kurulumlardan kalan farkli isimliler orphan kalmasin)
+  DelTree(ExpandConstant('{autoprograms}\{#MyAppName}'), True, True, True);
+  DeleteFile(ExpandConstant('{autodesktop}\KolektifSRM.lnk'));
+  DeleteFile(ExpandConstant('{autodesktop}\Kolektif360 SRM.lnk'));
 end;
 
 function InitializeSetup(): Boolean;

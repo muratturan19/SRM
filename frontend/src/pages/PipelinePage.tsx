@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import {
   Box, Typography, Paper, Card, CardContent,
-  Chip, Avatar, CircularProgress, Tabs, Tab,
+  Chip, Avatar, CircularProgress, Tabs, Tab, IconButton, Tooltip,
 } from '@mui/material'
+import { Delete } from '@mui/icons-material'
 import {
   DndContext,
   DragEndEvent,
@@ -29,7 +30,7 @@ import {
 import type { Contact, ContactStage, Deal, DealStage } from '../types'
 
 // ── Draggable Contact Card ────────────────────────────────────────
-function SortableCard({ contact }: { contact: Contact }) {
+function SortableCard({ contact, onDelete }: { contact: Contact; onDelete: (id: string) => void }) {
   const navigate = useNavigate()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: contact.id })
@@ -47,6 +48,7 @@ function SortableCard({ contact }: { contact: Contact }) {
         transform: CSS.Transform.toString(transform),
         transition,
         '&:hover': { boxShadow: 4 },
+        '&:hover .delete-btn': { opacity: 1 },
       }}
     >
       <CardContent sx={{ p: '10px !important' }}>
@@ -67,6 +69,20 @@ function SortableCard({ contact }: { contact: Contact }) {
               </Typography>
             )}
           </Box>
+          <Tooltip title="Sil">
+            <IconButton
+              className="delete-btn"
+              size="small"
+              color="error"
+              sx={{ opacity: 0, transition: 'opacity 0.15s' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (confirm(`${contact.name} silinsin mi?`)) onDelete(contact.id)
+              }}
+            >
+              <Delete sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       </CardContent>
     </Card>
@@ -77,9 +93,11 @@ function SortableCard({ contact }: { contact: Contact }) {
 function Column({
   stage,
   contacts,
+  onDelete,
 }: {
   stage: ContactStage
   contacts: Contact[]
+  onDelete: (id: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage })
 
@@ -145,7 +163,7 @@ function Column({
           strategy={verticalListSortingStrategy}
         >
           {contacts.map((c) => (
-            <SortableCard key={c.id} contact={c} />
+            <SortableCard key={c.id} contact={c} onDelete={onDelete} />
           ))}
         </SortableContext>
         {contacts.length === 0 && (
@@ -272,6 +290,14 @@ export default function PipelinePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
   })
 
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => contactsApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contacts'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    },
+  })
+
   // Group contacts by stage (including customer — shown as final column)
   const ALL_CONTACT_STAGES: ContactStage[] = [...PIPELINE_STAGES, 'customer']
   const byStage: Record<ContactStage, Contact[]> = {} as Record<ContactStage, Contact[]>
@@ -337,7 +363,7 @@ export default function PipelinePage() {
             <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
               <Box sx={{ display: 'flex', gap: 2, minWidth: 'max-content' }}>
                 {ALL_CONTACT_STAGES.map((stage) => (
-                  <Column key={stage} stage={stage} contacts={byStage[stage]} />
+                  <Column key={stage} stage={stage} contacts={byStage[stage]} onDelete={(id) => deleteMut.mutate(id)} />
                 ))}
               </Box>
               <DragOverlay>

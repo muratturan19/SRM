@@ -103,6 +103,15 @@ export default function ContactDetailPage() {
     },
   })
 
+  const deleteContactMut = useMutation({
+    mutationFn: () => contactsApi.delete(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contacts'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      navigate('/contacts')
+    },
+  })
+
   const checkboxMut = useMutation({
     mutationFn: (data: Partial<Contact>) => contactsApi.update(id!, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contact', id] }),
@@ -217,6 +226,16 @@ export default function ContactDetailPage() {
           <Button variant="outlined" startIcon={<Edit />} onClick={openEdit}>
             Düzenle
           </Button>
+          <Tooltip title="Kişiyi Sil">
+            <IconButton
+              color="error"
+              onClick={() => {
+                if (confirm(`${contact.name} kalıcı olarak silinsin mi?`)) deleteContactMut.mutate()
+              }}
+            >
+              <Delete />
+            </IconButton>
+          </Tooltip>
         </Box>
 
         {/* Contact info */}

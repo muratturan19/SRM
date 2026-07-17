@@ -19,6 +19,9 @@ _app_submodules = collect_submodules("app")
 # Frontend build dizini (npm run build sonrası oluşur)
 FRONTEND_DIST = str((Path(SPECPATH).parent / "frontend" / "dist").resolve())
 
+# Uygulama ikonu (markalı .ico)
+APP_ICON = str((Path(SPECPATH).parent / "installer" / "srm.ico").resolve())
+
 a = Analysis(
     ["run.py"],
     pathex=[SPECPATH],
@@ -126,6 +129,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=APP_ICON,
 )
 
 coll = COLLECT(
