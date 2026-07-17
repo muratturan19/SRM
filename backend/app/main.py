@@ -10,11 +10,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.database import Base
-from app.api.routes import contacts, deals, reminders, scan, dashboard, backup, activities, voice
+from app.api.routes import contacts, deals, reminders, scan, dashboard, backup, activities, voice, outreach
 from app.api.routes import settings_route
 from app.api.sso import router as sso_router
 import app.models.settings
 import app.models.activity
+import app.models.outreach_template
 from app.services.reminder_scheduler import start_scheduler, stop_scheduler
 
 
@@ -62,7 +63,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.3.0",
+    version="1.4.0",
     lifespan=lifespan,
     redirect_slashes=False,
 )
@@ -91,11 +92,12 @@ app.include_router(settings_route.router, prefix="/api/settings", tags=["setting
 app.include_router(backup.router, prefix="/api/admin", tags=["admin"])
 app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
 app.include_router(voice.router, prefix="/api/voice", tags=["voice"])
+app.include_router(outreach.router, prefix="/api/outreach", tags=["outreach"])
 
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "app": settings.app_name, "version": "1.3.0"}
+    return {"status": "ok", "app": settings.app_name, "version": "1.4.0"}
 
 
 # Frontend SPA — SADECE /assets prefix'i mount edilir.

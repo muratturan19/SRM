@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.models.deal import Deal
+from app.models.deal import Deal, DealStage
 from app.models.contact import Contact
 from app.schemas.deal import DealCreate, DealUpdate, DealRead
 from app.core.config import settings
@@ -52,7 +52,18 @@ async def update_deal(
     deal = result.scalar_one_or_none()
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
-    for field, value in data.model_dump(exclude_unset=True).items():
+
+    update_dict = data.model_dump(exclude_unset=True)
+    becoming_lost = update_dict.get("stage") == DealStage.LOST and deal.stage != DealStage.LOST
+    if becoming_lost:
+        lost_reason = update_dict.get("lost_reason_category", deal.lost_reason_category)
+        if not lost_reason:
+            raise HTTPException(
+                status_code=422,
+                detail="Anlaşma 'Kayıp' olarak işaretlenirken hayırsa sebebi (lost_reason_category) zorunludur",
+            )
+
+    for field, value in update_dict.items():
         setattr(deal, field, value)
     await db.flush()
     await db.refresh(deal)

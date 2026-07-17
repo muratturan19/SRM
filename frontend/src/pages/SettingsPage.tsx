@@ -31,8 +31,8 @@ import {
   DeleteOutline,
   BackupOutlined,
 } from '@mui/icons-material'
-import { settingsApi } from '../services/api'
-import type { ReminderRule, SystemSettings } from '../types'
+import { settingsApi, outreachApi } from '../services/api'
+import type { ReminderRule, SystemSettings, OutreachTemplate } from '../types'
 
 const TRIGGER_LABELS: Record<string, string> = {
   is_contacted: 'Temas sonrası hatırlatma',
@@ -76,10 +76,18 @@ export default function SettingsPage() {
   const [rules, setRules] = useState<ReminderRule[] | null>(null)
   const [snoozeEnabled, setSnoozeEnabled] = useState<boolean | null>(null)
   const [snoozeDays, setSnoozeDays] = useState<number | null>(null)
+  const [maxFollowups, setMaxFollowups] = useState<number | null>(null)
+  const [passiveAfterDays, setPassiveAfterDays] = useState<number | null>(null)
+  const [reactivateAfterDays, setReactivateAfterDays] = useState<number | null>(null)
+  const [selinTitle, setSelinTitle] = useState<string | null>(null)
 
   const effectiveRules: ReminderRule[] = rules ?? data?.reminder_rules ?? DEFAULT_RULES
   const effectiveSnooze: boolean = snoozeEnabled ?? data?.snooze_enabled ?? false
   const effectiveDays: number = snoozeDays ?? data?.snooze_days ?? 2
+  const effectiveMaxFollowups: number = maxFollowups ?? data?.max_followups ?? 2
+  const effectivePassiveAfterDays: number = passiveAfterDays ?? data?.passive_after_days ?? 14
+  const effectiveReactivateAfterDays: number = reactivateAfterDays ?? data?.reactivate_after_days ?? 90
+  const effectiveSelinTitle: string = selinTitle ?? data?.selin_title ?? 'İş Geliştirme Ortağı'
 
   const updateMut = useMutation({
     mutationFn: (payload: Partial<SystemSettings>) => settingsApi.update(payload),
@@ -89,6 +97,40 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(false), 3000)
     },
   })
+
+  // ── Yaklaşım Şablonları (T1-T8) ─────────────────────────────────
+  const { data: templatesData } = useQuery({
+    queryKey: ['outreach-templates'],
+    queryFn: outreachApi.templates,
+  })
+  const [templates, setTemplates] = useState<OutreachTemplate[] | null>(null)
+  const [templatesSaved, setTemplatesSaved] = useState(false)
+  const effectiveTemplates: OutreachTemplate[] = templates ?? templatesData ?? []
+
+  const saveTemplatesMut = useMutation({
+    mutationFn: async (list: OutreachTemplate[]) => {
+      await Promise.all(
+        list.map((t) =>
+          outreachApi.updateTemplate(t.id, {
+            subject: t.subject,
+            body: t.body,
+            follow_up_days: t.follow_up_days,
+            active: t.active,
+          }),
+        ),
+      )
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['outreach-templates'] })
+      setTemplatesSaved(true)
+      setTimeout(() => setTemplatesSaved(false), 3000)
+    },
+  })
+
+  const handleTemplateField = (idx: number, field: keyof OutreachTemplate, value: any) => {
+    const next = effectiveTemplates.map((t, i) => (i === idx ? { ...t, [field]: value } : t))
+    setTemplates(next)
+  }
 
   const handleToggle = (idx: number, enabled: boolean) => {
     const next = effectiveRules.map((r, i) => (i === idx ? { ...r, enabled } : r))
@@ -105,7 +147,15 @@ export default function SettingsPage() {
       reminder_rules: effectiveRules,
       snooze_enabled: effectiveSnooze,
       snooze_days: effectiveDays,
+      max_followups: effectiveMaxFollowups,
+      passive_after_days: effectivePassiveAfterDays,
+      reactivate_after_days: effectiveReactivateAfterDays,
+      selin_title: effectiveSelinTitle,
     })
+  }
+
+  const handleSaveTemplates = () => {
+    saveTemplatesMut.mutate(effectiveTemplates)
   }
 
   // ── Backup handlers ────────────────────────────────────────────
@@ -261,6 +311,60 @@ export default function SettingsPage() {
         </Stack>
       </Paper>
 
+      <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+        <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+          Temas (Outreach) Otomasyonu
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+          Selin'in temas sürecindeki takip zamanlamaları — belgedeki süreler burada
+          değiştirilebilir, kodda sabit değildir.
+        </Typography>
+        <Stack spacing={2}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="body2">İlk mesaj + en fazla kaç takip</Typography>
+            <TextField
+              size="small"
+              type="number"
+              value={effectiveMaxFollowups}
+              onChange={(e) => setMaxFollowups(parseInt(e.target.value, 10) || 1)}
+              inputProps={{ min: 1, max: 10 }}
+              sx={{ width: 90 }}
+            />
+          </Stack>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="body2">Cevapsız kalırsa kaç gün sonra pasife alınsın</Typography>
+            <TextField
+              size="small"
+              type="number"
+              value={effectivePassiveAfterDays}
+              onChange={(e) => setPassiveAfterDays(parseInt(e.target.value, 10) || 1)}
+              inputProps={{ min: 1, max: 365 }}
+              sx={{ width: 90 }}
+            />
+          </Stack>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="body2">Pasiften kaç gün sonra "yeniden temas" hatırlatılsın</Typography>
+            <TextField
+              size="small"
+              type="number"
+              value={effectiveReactivateAfterDays}
+              onChange={(e) => setReactivateAfterDays(parseInt(e.target.value, 10) || 1)}
+              inputProps={{ min: 1, max: 365 }}
+              sx={{ width: 90 }}
+            />
+          </Stack>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="body2">Selin'in unvanı ({'{{selin_unvan}}'})</Typography>
+            <TextField
+              size="small"
+              value={effectiveSelinTitle}
+              onChange={(e) => setSelinTitle(e.target.value)}
+              sx={{ width: 220 }}
+            />
+          </Stack>
+        </Stack>
+      </Paper>
+
       {saved && (
         <Alert severity="success" sx={{ mb: 2 }}>
           Ayarlar kaydedildi.
@@ -279,6 +383,101 @@ export default function SettingsPage() {
       >
         Kaydet
       </Button>
+
+      {/* ── Yaklaşım Şablonları (T1-T8) ─────────────────────── */}
+      <Paper variant="outlined" sx={{ p: 3, mt: 4, mb: 3 }}>
+        <Typography variant="subtitle1" fontWeight={700} mb={0.5}>
+          Yaklaşım Şablonları (T1-T8)
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+          Selin'in ilk temas ve takip mesajları — metinler burada düzenlenir, kod
+          değişikliği gerekmez.
+        </Typography>
+
+        <Stack spacing={2}>
+          {effectiveTemplates.map((tpl, idx) => (
+            <Box key={tpl.id}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="body2" fontWeight={600}>
+                  {tpl.code} — {tpl.title}
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={tpl.active}
+                      onChange={(e) => handleTemplateField(idx, 'active', e.target.checked)}
+                    />
+                  }
+                  label={<Typography variant="caption">Aktif</Typography>}
+                  sx={{ m: 0 }}
+                />
+              </Stack>
+              {tpl.subject !== undefined && tpl.subject !== null && (
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Konu (e-posta)"
+                  value={tpl.subject ?? ''}
+                  onChange={(e) => handleTemplateField(idx, 'subject', e.target.value)}
+                  sx={{ mb: 1 }}
+                />
+              )}
+              <TextField
+                fullWidth
+                multiline
+                minRows={3}
+                size="small"
+                label="Mesaj metni"
+                value={tpl.body}
+                onChange={(e) => handleTemplateField(idx, 'body', e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              {tpl.follow_up_template_code && (
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="caption" color="text.secondary">
+                    Cevapsızsa {tpl.follow_up_template_code} takibi
+                  </Typography>
+                  <TextField
+                    size="small"
+                    type="number"
+                    value={tpl.follow_up_days ?? ''}
+                    onChange={(e) =>
+                      handleTemplateField(idx, 'follow_up_days', parseInt(e.target.value, 10) || null)
+                    }
+                    inputProps={{ min: 1, max: 90 }}
+                    sx={{ width: 80 }}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    gün sonra
+                  </Typography>
+                </Stack>
+              )}
+              {idx < effectiveTemplates.length - 1 && <Divider sx={{ mt: 2 }} />}
+            </Box>
+          ))}
+        </Stack>
+
+        {templatesSaved && (
+          <Alert severity="success" sx={{ mt: 2 }}>
+            Şablonlar kaydedildi.
+          </Alert>
+        )}
+        {saveTemplatesMut.isError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            Kaydetme hatası. Lütfen tekrar deneyin.
+          </Alert>
+        )}
+        <Button
+          variant="contained"
+          sx={{ mt: 2 }}
+          startIcon={saveTemplatesMut.isPending ? <CircularProgress size={16} color="inherit" /> : <Save />}
+          onClick={handleSaveTemplates}
+          disabled={saveTemplatesMut.isPending || effectiveTemplates.length === 0}
+        >
+          Şablonları Kaydet
+        </Button>
+      </Paper>
 
       {/* ── Yedekleme & Geri Yükleme ───────────────────────── */}
       <Paper variant="outlined" sx={{ p: 3, mt: 4 }}>

@@ -6,6 +6,21 @@ Versiyon: [Semantic Versioning](https://semver.org/lang/tr/)
 
 ---
 
+## [1.4.0] — 2026-07-17
+
+### Eklendi
+- **Temas (Outreach) Otomasyonu:** Selin'in ilk temas/takip sürecini CRM'e taşıyan yeni modül.
+  - **Şablonlar (T1-T8):** Kişisel ağ (WhatsApp), referanslı tanışma (e-posta), LinkedIn bağlantı notu/mesajı, soğuk e-posta, telefon açılışı, 7 gün takip mesajı ve görüşme sonrası özet — hepsi veritabanında, Ayarlar sayfasından tamamen düzenlenebilir (kod değişikliği/deploy gerektirmez).
+  - **Kişiselleştirme kilidi:** Şablondaki `{{isim}}`, `{{firma}}`, `{{referans}}` gibi alanlar kişi kaydında eksikse gönderim engellenir, hangi alanın eksik olduğu gösterilir.
+  - **Kişi kaydına yeni alanlar:** Halka (kişisel ağ/referans/soğuk temas), referans kişi, ortak geçmiş.
+  - **Otomatik takip zamanlaması:** "Gönderildi" işaretlendiğinde bir sonraki takip (ör. 7 gün sonra T7) otomatik bir Hatırlatıcı olarak açılır; Selin bunu dilediği gibi düzenleyebilir/erteleyebilir/silebilir.
+  - **Otomatik pasife alma:** Takip hakkı dolup belirlenen süre boyunca cevap alınamayan kişiler otomatik pasife alınır, "yeniden temas" hatırlatıcısı açılır; Selin elle de pasife alabilir/reaktive edebilir.
+  - **Otomasyon eşikleri Ayarlar'dan yönetilir:** İlk mesaj + kaç takip, pasife alma eşiği (gün), yeniden temas eşiği (gün), Selin'in unvanı — hiçbiri koda sabit yazılmadı.
+  - **Aktivite zaman çizelgesi entegrasyonu:** Her temas kaydı (şablon kodu + kanal) mevcut Aktiviteler sekmesinde görünür; cevap durumu (cevap yok/olumlu/olumsuz/görüşme planlandı) buradan işaretlenir.
+- **Anlaşma "Kayıp" sebebi:** Bir anlaşma Kayıp olarak işaretlenirken kategorik bir sebep (fiyat, zamanlama, ilgisiz, rakip, bütçe yok, yanlış karar verici, diğer) + not artık zorunlu.
+
+---
+
 ## [1.3.0] — 2026-06-19
 
 ### Eklendi

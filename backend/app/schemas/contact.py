@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, field_validator
-from app.models.contact import ContactStage
+from app.models.contact import ContactStage, OutreachTier
 from app.core.phone_utils import normalize_phone
 
 if TYPE_CHECKING:
@@ -29,6 +29,9 @@ class ContactBase(BaseModel):
     is_met: bool = False
     is_demo_sent: bool = False
     is_proposal_sent: bool = False
+    outreach_tier: Optional[OutreachTier] = None
+    referred_by: Optional[str] = None
+    common_context: Optional[str] = None
 
     @field_validator('phone', 'phone2', mode='before')
     @classmethod
@@ -58,6 +61,9 @@ class ContactUpdate(BaseModel):
     is_met: Optional[bool] = None
     is_demo_sent: Optional[bool] = None
     is_proposal_sent: Optional[bool] = None
+    outreach_tier: Optional[OutreachTier] = None
+    referred_by: Optional[str] = None
+    common_context: Optional[str] = None
 
     @field_validator('phone', 'phone2', mode='before')
     @classmethod
@@ -68,6 +74,8 @@ class ContactUpdate(BaseModel):
 class ContactRead(ContactBase):
     id: uuid.UUID
     avatar_path: Optional[str] = None
+    is_passive: bool = False
+    passive_since: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     deals: List["DealRead"] = []

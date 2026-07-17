@@ -13,6 +13,7 @@ class ActivityType(str, enum.Enum):
     EMAIL = "email"
     NOTE = "note"
     TASK = "task"
+    OUTREACH = "outreach"  # Şablon bazlı temas kaydı (kolektif360 yaklaşım süreci)
 
 
 class Activity(Base):
@@ -30,6 +31,10 @@ class Activity(Base):
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     outcome: Mapped[str | None] = mapped_column(String(500))  # arama/toplantı sonucu
+
+    # Temas (outreach) kaydı alanları — sadece type=OUTREACH için doldurulur
+    template_code: Mapped[str | None] = mapped_column(String(10))   # "T1".."T8"
+    channel: Mapped[str | None] = mapped_column(String(20))         # whatsapp/email/linkedin_note/...
 
     # Görev alanları
     due_at: Mapped[datetime | None] = mapped_column(DateTime)

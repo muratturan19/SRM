@@ -10,6 +10,8 @@ class ActivityCreate(BaseModel):
     type: ActivityType = ActivityType.NOTE
     content: str
     outcome: Optional[str] = None
+    template_code: Optional[str] = None
+    channel: Optional[str] = None
     due_at: Optional[datetime] = None
     is_done: bool = False
 
@@ -18,6 +20,8 @@ class ActivityUpdate(BaseModel):
     type: Optional[ActivityType] = None
     content: Optional[str] = None
     outcome: Optional[str] = None
+    template_code: Optional[str] = None
+    channel: Optional[str] = None
     due_at: Optional[datetime] = None
     is_done: Optional[bool] = None
 
@@ -28,6 +32,8 @@ class ActivityRead(BaseModel):
     type: ActivityType
     content: str
     outcome: Optional[str] = None
+    template_code: Optional[str] = None
+    channel: Optional[str] = None
     due_at: Optional[datetime] = None
     is_done: bool
     created_at: datetime

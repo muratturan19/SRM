@@ -7,7 +7,7 @@ import {
 } from '@mui/material'
 import {
   Add, Delete, Edit, CheckCircle, RadioButtonUnchecked,
-  Phone, Groups, Email, Notes, TaskAlt,
+  Phone, Groups, Email, Notes, TaskAlt, Campaign,
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
@@ -17,9 +17,9 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
-import { activitiesApi } from '../services/api'
-import { ACTIVITY_LABELS, ACTIVITY_ICONS } from '../types'
-import type { Activity, ActivityType } from '../types'
+import { activitiesApi, outreachApi } from '../services/api'
+import { ACTIVITY_LABELS, ACTIVITY_ICONS, OUTREACH_CHANNEL_LABELS, OUTREACH_OUTCOME_LABELS } from '../types'
+import type { Activity, ActivityType, OutreachChannel, OutreachOutcome } from '../types'
 
 dayjs.extend(relativeTime)
 dayjs.locale('tr')
@@ -30,6 +30,7 @@ const TYPE_ICON: Record<ActivityType, React.ReactNode> = {
   email: <Email fontSize="small" />,
   note: <Notes fontSize="small" />,
   task: <TaskAlt fontSize="small" />,
+  outreach: <Campaign fontSize="small" />,
 }
 
 const TYPE_COLOR: Record<ActivityType, string> = {
@@ -38,6 +39,7 @@ const TYPE_COLOR: Record<ActivityType, string> = {
   email: '#06B6D4',
   note: '#F59E0B',
   task: '#10B981',
+  outreach: '#EC4899',
 }
 
 interface FormValues {
@@ -107,6 +109,17 @@ export default function ActivityTimeline({ contactId }: Props) {
   const deleteMut = useMutation({
     mutationFn: activitiesApi.delete,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['activities', contactId] }),
+  })
+
+  const outcomeMut = useMutation({
+    mutationFn: ({ activityId, outcome }: { activityId: string; outcome: OutreachOutcome }) =>
+      outreachApi.setOutcome(contactId, activityId, outcome),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['activities', contactId] })
+      qc.invalidateQueries({ queryKey: ['contact', contactId] })
+      qc.invalidateQueries({ queryKey: ['outreach-next-action', contactId] })
+      qc.invalidateQueries({ queryKey: ['reminders'] })
+    },
   })
 
   const openNew = () => {
@@ -243,10 +256,42 @@ export default function ActivityTimeline({ contactId }: Props) {
                     >
                       {a.content}
                     </Typography>
-                    {a.outcome && (
+                    {a.type === 'outreach' && (a.template_code || a.channel) && (
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-                        Sonuç: {a.outcome}
+                        {[a.template_code, a.channel && (OUTREACH_CHANNEL_LABELS[a.channel as OutreachChannel] ?? a.channel)]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </Typography>
+                    )}
+                    {a.type === 'outreach' && a.outcome === 'sent' ? (
+                      <TextField
+                        select
+                        size="small"
+                        label="Sonucu işaretle"
+                        value=""
+                        onChange={(e) =>
+                          outcomeMut.mutate({ activityId: a.id, outcome: e.target.value as OutreachOutcome })
+                        }
+                        sx={{ mt: 0.5, minWidth: 220 }}
+                      >
+                        {(Object.keys(OUTREACH_OUTCOME_LABELS) as OutreachOutcome[])
+                          .filter((o) => o !== 'sent')
+                          .map((o) => (
+                            <MenuItem key={o} value={o}>
+                              {OUTREACH_OUTCOME_LABELS[o]}
+                            </MenuItem>
+                          ))}
+                      </TextField>
+                    ) : a.type === 'outreach' && a.outcome ? (
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                        Sonuç: {OUTREACH_OUTCOME_LABELS[a.outcome as OutreachOutcome] ?? a.outcome}
+                      </Typography>
+                    ) : (
+                      a.outcome && (
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                          Sonuç: {a.outcome}
+                        </Typography>
+                      )
                     )}
                   </Box>
 

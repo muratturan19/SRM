@@ -6,9 +6,35 @@ export type ContactStage =
   | 'proposal_sent'
   | 'customer'
 
-export type ActivityType = 'call' | 'meeting' | 'email' | 'note' | 'task'
+export type ActivityType = 'call' | 'meeting' | 'email' | 'note' | 'task' | 'outreach'
 
 export type DealStage = 'new' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost'
+
+export type OutreachTier = 'ring1_personal' | 'ring2_referral' | 'ring3_cold'
+
+export type OutreachChannel =
+  | 'whatsapp'
+  | 'email'
+  | 'linkedin_note'
+  | 'linkedin_dm'
+  | 'phone'
+  | 'email_summary'
+
+export type OutreachOutcome =
+  | 'sent'
+  | 'no_response'
+  | 'replied_positive'
+  | 'replied_negative'
+  | 'meeting_booked'
+
+export type LostReasonCategory =
+  | 'fiyat'
+  | 'zamanlama'
+  | 'ilgisiz'
+  | 'rakip'
+  | 'butce_yok'
+  | 'yanlis_karar_verici'
+  | 'diger'
 
 export interface Activity {
   id: string
@@ -16,6 +42,8 @@ export interface Activity {
   type: ActivityType
   content: string
   outcome?: string
+  template_code?: string
+  channel?: OutreachChannel | string
   due_at?: string
   is_done: boolean
   created_at: string
@@ -42,6 +70,11 @@ export interface Contact {
   is_met: boolean
   is_demo_sent: boolean
   is_proposal_sent: boolean
+  outreach_tier?: OutreachTier
+  referred_by?: string
+  common_context?: string
+  is_passive?: boolean
+  passive_since?: string
   created_at: string
   updated_at: string
   deals?: Deal[]
@@ -60,6 +93,8 @@ export interface Deal {
   contract_date?: string
   contract_pdf_path?: string
   notes?: string
+  lost_reason_category?: LostReasonCategory
+  lost_reason_note?: string
   created_at: string
   updated_at: string
   contact?: Pick<Contact, 'id' | 'name' | 'company'>
@@ -148,6 +183,7 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   email: 'E-posta',
   note: 'Not',
   task: 'Görev',
+  outreach: 'Temas',
 }
 
 export const ACTIVITY_ICONS: Record<ActivityType, string> = {
@@ -156,6 +192,40 @@ export const ACTIVITY_ICONS: Record<ActivityType, string> = {
   email: '✉️',
   note: '📝',
   task: '✅',
+  outreach: '📨',
+}
+
+export const OUTREACH_TIER_LABELS: Record<OutreachTier, string> = {
+  ring1_personal: 'Halka 1 — Kişisel Ağ',
+  ring2_referral: 'Halka 2 — Referanslı',
+  ring3_cold: 'Halka 3 — Soğuk Temas',
+}
+
+export const OUTREACH_CHANNEL_LABELS: Record<OutreachChannel, string> = {
+  whatsapp: 'WhatsApp',
+  email: 'E-posta',
+  linkedin_note: 'LinkedIn Bağlantı Notu',
+  linkedin_dm: 'LinkedIn Mesajı',
+  phone: 'Telefon',
+  email_summary: 'E-posta (Özet)',
+}
+
+export const OUTREACH_OUTCOME_LABELS: Record<OutreachOutcome, string> = {
+  sent: 'Gönderildi (cevap bekleniyor)',
+  no_response: 'Cevap yok',
+  replied_positive: 'Olumlu cevap',
+  replied_negative: 'Olumsuz cevap',
+  meeting_booked: 'Görüşme planlandı',
+}
+
+export const LOST_REASON_LABELS: Record<LostReasonCategory, string> = {
+  fiyat: 'Fiyat',
+  zamanlama: 'Zamanlama',
+  ilgisiz: 'İlgisiz',
+  rakip: 'Rakip',
+  butce_yok: 'Bütçe yok',
+  yanlis_karar_verici: 'Yanlış karar verici',
+  diger: 'Diğer',
 }
 
 export const PIPELINE_STAGES: ContactStage[] = [
@@ -186,6 +256,53 @@ export interface SystemSettings {
   reminder_rules: ReminderRule[]
   snooze_enabled: boolean
   snooze_days: number
+  max_followups: number
+  passive_after_days: number
+  reactivate_after_days: number
+  selin_title: string
+}
+
+// ── Temas (outreach) otomasyonu ───────────────────────────────────
+export interface OutreachTemplate {
+  id: string
+  code: string
+  title: string
+  channel?: OutreachChannel
+  applicable_tiers: string
+  is_first_touch: boolean
+  subject?: string
+  body: string
+  follow_up_days?: number
+  follow_up_template_code?: string
+  triggers_generic_followup: boolean
+  active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface NextActionCandidate {
+  template_code: string
+  title: string
+  channel?: OutreachChannel
+  subject?: string
+  body: string
+  missing_fields: string[]
+  due_date?: string
+  is_overdue: boolean
+}
+
+export interface NextActionResponse {
+  contact_id: string
+  is_passive: boolean
+  passive_since?: string
+  suggest_passive: boolean
+  candidates: NextActionCandidate[]
+}
+
+export interface OutreachSendResponse {
+  activity: Activity
+  reminder?: Reminder
 }
 
 // ── Sesli giriş (voice input) ─────────────────────────────────────

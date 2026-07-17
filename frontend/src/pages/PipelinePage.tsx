@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Box, Typography, Paper, Card, CardContent,
   Chip, Avatar, CircularProgress, Tabs, Tab, IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Stack,
 } from '@mui/material'
 import { Delete } from '@mui/icons-material'
 import {
@@ -26,8 +27,9 @@ import { contactsApi, dealsApi } from '../services/api'
 import {
   STAGE_LABELS, STAGE_COLORS, PIPELINE_STAGES,
   DEAL_STAGE_LABELS, DEAL_STAGE_COLORS, DEAL_PIPELINE_STAGES, DEAL_STAGE_PROBABILITY,
+  LOST_REASON_LABELS,
 } from '../types'
-import type { Contact, ContactStage, Deal, DealStage } from '../types'
+import type { Contact, ContactStage, Deal, DealStage, LostReasonCategory } from '../types'
 
 // ── Draggable Contact Card ────────────────────────────────────────
 function SortableCard({ contact, onDelete }: { contact: Contact; onDelete: (id: string) => void }) {
@@ -285,10 +287,43 @@ export default function PipelinePage() {
   })
 
   const updateDealMut = useMutation({
-    mutationFn: ({ id, stage }: { id: string; stage: DealStage }) =>
-      dealsApi.update(id, { stage, probability: DEAL_STAGE_PROBABILITY[stage] }),
+    mutationFn: ({
+      id, stage, lost_reason_category, lost_reason_note,
+    }: {
+      id: string
+      stage: DealStage
+      lost_reason_category?: LostReasonCategory
+      lost_reason_note?: string
+    }) =>
+      dealsApi.update(id, {
+        stage,
+        probability: DEAL_STAGE_PROBABILITY[stage],
+        ...(lost_reason_category ? { lost_reason_category, lost_reason_note } : {}),
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
   })
+
+  // ── Kayıp (LOST) — hayırsa sebebi zorunlu ────────────────────────
+  const [lostDealId, setLostDealId] = useState<string | null>(null)
+  const [lostReason, setLostReason] = useState<LostReasonCategory | ''>('')
+  const [lostNote, setLostNote] = useState('')
+
+  const closeLostDialog = () => {
+    setLostDealId(null)
+    setLostReason('')
+    setLostNote('')
+  }
+
+  const confirmLost = () => {
+    if (!lostDealId || !lostReason) return
+    updateDealMut.mutate({
+      id: lostDealId,
+      stage: 'lost',
+      lost_reason_category: lostReason,
+      lost_reason_note: lostNote || undefined,
+    })
+    closeLostDialog()
+  }
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => contactsApi.delete(id),
@@ -332,9 +367,12 @@ export default function PipelinePage() {
 
   const handleDealDrop = (dealId: string, stage: DealStage) => {
     const deal = deals.find((d) => d.id === dealId)
-    if (deal && deal.stage !== stage) {
-      updateDealMut.mutate({ id: dealId, stage })
+    if (!deal || deal.stage === stage) return
+    if (stage === 'lost') {
+      setLostDealId(dealId)
+      return
     }
+    updateDealMut.mutate({ id: dealId, stage })
   }
 
   if (isLoading)
@@ -423,6 +461,44 @@ export default function PipelinePage() {
           </Box>
         </>
       )}
+
+      {/* Kayıp (LOST) — hayırsa sebebi zorunlu */}
+      <Dialog open={!!lostDealId} onClose={closeLostDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>Anlaşma Kayıp — Hayırsa Sebebi</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2}>
+            <TextField
+              select
+              label="Sebep *"
+              value={lostReason}
+              onChange={(e) => setLostReason(e.target.value as LostReasonCategory)}
+              size="small"
+              fullWidth
+            >
+              {(Object.keys(LOST_REASON_LABELS) as LostReasonCategory[]).map((r) => (
+                <MenuItem key={r} value={r}>
+                  {LOST_REASON_LABELS[r]}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Not (opsiyonel)"
+              value={lostNote}
+              onChange={(e) => setLostNote(e.target.value)}
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeLostDialog}>İptal</Button>
+          <Button variant="contained" color="warning" onClick={confirmLost} disabled={!lostReason}>
+            Kayıp Olarak İşaretle
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

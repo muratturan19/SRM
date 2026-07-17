@@ -191,7 +191,7 @@ export default function VoiceInputModal({ open, onClose, onSaved }: Props) {
     setSaving(true)
     setError(null)
     try {
-      await contactsApi.create(data, force)
+      await contactsApi.create({ ...data, outreach_tier: data.outreach_tier || undefined }, force)
       finish(`${data.name} kişi olarak eklendi.`)
     } catch (e: any) {
       const detail = e?.response?.data?.detail

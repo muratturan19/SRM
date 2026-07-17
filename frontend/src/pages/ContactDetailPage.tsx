@@ -2,23 +2,23 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box, Typography, Card, CardContent, Grid, Chip, Avatar,
-  Button, Divider, FormControlLabel, Checkbox, TextField,
+  Button, Divider, FormControlLabel, Checkbox, TextField, MenuItem,
   Dialog, DialogTitle, DialogContent, DialogActions,
   List, ListItem, ListItemText, ListItemSecondaryAction,
-  IconButton, Tab, Tabs, Tooltip, CircularProgress,
+  IconButton, Tab, Tabs, Tooltip, CircularProgress, Stack, Paper, Alert,
 } from '@mui/material'
 import {
   ArrowBack, Edit, Add, Delete, UploadFile,
   Email, Phone, LinkedIn, Language, LocationOn, Map, Timeline,
-  Mic, Stop, GraphicEq,
+  Mic, Stop, GraphicEq, ContentCopy,
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import dayjs from 'dayjs'
-import { contactsApi, dealsApi, remindersApi, activitiesApi, voiceApi } from '../services/api'
+import { contactsApi, dealsApi, remindersApi, activitiesApi, voiceApi, outreachApi } from '../services/api'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
-import { STAGE_LABELS, STAGE_COLORS } from '../types'
-import type { Contact, Deal, Reminder, Activity } from '../types'
+import { STAGE_LABELS, STAGE_COLORS, OUTREACH_TIER_LABELS, OUTREACH_CHANNEL_LABELS } from '../types'
+import type { Contact, Deal, Reminder, Activity, NextActionCandidate, OutreachChannel } from '../types'
 import ContactFormFields from '../components/ContactForm'
 import type { ContactFormValues } from '../components/ContactForm'
 import ActivityTimeline from '../components/ActivityTimeline'
@@ -117,6 +117,62 @@ export default function ContactDetailPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contact', id] }),
   })
 
+  // ── Temas (outreach) otomasyonu ──────────────────────────────────
+  const { data: nextAction } = useQuery({
+    queryKey: ['outreach-next-action', id],
+    queryFn: () => outreachApi.nextAction(id!),
+    enabled: !!id && !!contact,
+  })
+
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const handleCopy = (c: NextActionCandidate) => {
+    const text = c.subject ? `Konu: ${c.subject}\n\n${c.body}` : c.body
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedCode(c.template_code)
+      setTimeout(() => setCopiedCode(null), 2000)
+    })
+  }
+
+  const [sendCandidate, setSendCandidate] = useState<NextActionCandidate | null>(null)
+  const [sendChannel, setSendChannel] = useState<OutreachChannel | ''>('')
+  const [autoFollowup, setAutoFollowup] = useState(true)
+
+  const openSendDialog = (c: NextActionCandidate) => {
+    setSendCandidate(c)
+    setSendChannel(c.channel ?? '')
+    setAutoFollowup(true)
+  }
+
+  const invalidateOutreach = () => {
+    qc.invalidateQueries({ queryKey: ['contact', id] })
+    qc.invalidateQueries({ queryKey: ['activities', id] })
+    qc.invalidateQueries({ queryKey: ['outreach-next-action', id] })
+    qc.invalidateQueries({ queryKey: ['reminders'] })
+  }
+
+  const sendMut = useMutation({
+    mutationFn: () =>
+      outreachApi.send(id!, {
+        template_code: sendCandidate!.template_code,
+        channel: (sendChannel || undefined) as OutreachChannel | undefined,
+        auto_schedule_followup: autoFollowup,
+      }),
+    onSuccess: () => {
+      invalidateOutreach()
+      setSendCandidate(null)
+    },
+  })
+
+  const reactivateMut = useMutation({
+    mutationFn: () => outreachApi.reactivate(id!),
+    onSuccess: invalidateOutreach,
+  })
+
+  const markPassiveMut = useMutation({
+    mutationFn: () => outreachApi.markPassive(id!),
+    onSuccess: invalidateOutreach,
+  })
+
   // Deal form
   const {
     register: regDeal,
@@ -195,6 +251,9 @@ export default function ContactDetailPage() {
       is_met: contact.is_met,
       is_demo_sent: contact.is_demo_sent,
       is_proposal_sent: contact.is_proposal_sent,
+      outreach_tier: contact.outreach_tier ?? '',
+      referred_by: contact.referred_by ?? '',
+      common_context: contact.common_context ?? '',
     })
     setEditOpen(true)
   }
@@ -223,6 +282,7 @@ export default function ContactDetailPage() {
             label={STAGE_LABELS[contact.stage]}
             sx={{ bgcolor: STAGE_COLORS[contact.stage], color: '#fff', fontWeight: 700 }}
           />
+          {contact.is_passive && <Chip label="Pasif" variant="outlined" color="default" />}
           <Button variant="outlined" startIcon={<Edit />} onClick={openEdit}>
             Düzenle
           </Button>
@@ -326,6 +386,27 @@ export default function ContactDetailPage() {
                     <Typography variant="body2" sx={{ mt: 0.5 }}>{contact.notes}</Typography>
                   </>
                 )}
+                {(contact.outreach_tier || contact.referred_by || contact.common_context) && (
+                  <>
+                    <Divider sx={{ my: 1.5 }} />
+                    <Typography variant="caption" color="text.secondary" display="block">TEMAS YÖNTEMİ</Typography>
+                    {contact.outreach_tier && (
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        {OUTREACH_TIER_LABELS[contact.outreach_tier]}
+                      </Typography>
+                    )}
+                    {contact.referred_by && (
+                      <Typography variant="body2" color="text.secondary">
+                        Referans: {contact.referred_by}
+                      </Typography>
+                    )}
+                    {contact.common_context && (
+                      <Typography variant="body2" color="text.secondary">
+                        Ortak geçmiş: {contact.common_context}
+                      </Typography>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -373,6 +454,90 @@ export default function ContactDetailPage() {
             </Card>
           </Grid>
         </Grid>
+
+        {/* Sıradaki Temas */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="subtitle1" fontWeight={600} mb={1}>Sıradaki Temas</Typography>
+            <Divider sx={{ mb: 1.5 }} />
+
+            {contact.is_passive ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Bu kişi pasife alınmış
+                    {contact.passive_since && ` (${dayjs(contact.passive_since).format('DD.MM.YYYY')})`}.
+                  </Typography>
+                </Box>
+                <Button variant="outlined" onClick={() => reactivateMut.mutate()} disabled={reactivateMut.isPending}>
+                  Reaktive Et
+                </Button>
+              </Box>
+            ) : !contact.outreach_tier ? (
+              <Typography variant="body2" color="text.secondary">
+                Şablon önerisi için önce "Düzenle" ile Temas Yöntemi (Halka) seçin.
+              </Typography>
+            ) : nextAction?.suggest_passive ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Cevap alınamadı ve takip hakkı doldu. Pasife almayı düşünebilirsiniz.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  onClick={() => markPassiveMut.mutate()}
+                  disabled={markPassiveMut.isPending}
+                >
+                  Pasife Al
+                </Button>
+              </Box>
+            ) : nextAction && nextAction.candidates.length > 0 ? (
+              <Stack spacing={2}>
+                {nextAction.candidates.map((c) => (
+                  <Paper key={c.template_code} variant="outlined" sx={{ p: 1.5 }}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {c.template_code} — {c.title}
+                        {c.channel && ` (${OUTREACH_CHANNEL_LABELS[c.channel]})`}
+                      </Typography>
+                      {c.is_overdue && <Chip label="Şimdi gönder" size="small" color="warning" />}
+                    </Stack>
+                    {c.missing_fields.length > 0 && (
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        Eksik bilgi: {c.missing_fields.join(', ')} — göndermeden önce kişi kaydını tamamlayın.
+                      </Alert>
+                    )}
+                    {c.subject && (
+                      <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                        Konu: {c.subject}
+                      </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
+                      {c.body}
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Button size="small" startIcon={<ContentCopy />} onClick={() => handleCopy(c)}>
+                        {copiedCode === c.template_code ? 'Kopyalandı ✓' : 'Kopyala'}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        disabled={c.missing_fields.length > 0}
+                        onClick={() => openSendDialog(c)}
+                      >
+                        Gönderildi Olarak İşaretle
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Şu anda önerilen bir aksiyon yok — cevap bekleniyor ya da görüşme planlanması gerekiyor.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Tabs: Deals & Reminders */}
         <Card>
@@ -629,7 +794,9 @@ export default function ContactDetailPage() {
             <Button onClick={() => setEditOpen(false)}>İptal</Button>
             <Button
               variant="contained"
-              onClick={handleEdit((data) => updateMut.mutate(data))}
+              onClick={handleEdit((data) =>
+                updateMut.mutate({ ...data, outreach_tier: data.outreach_tier || undefined }),
+              )}
               disabled={updateMut.isPending}
             >
               Kaydet
@@ -715,6 +882,48 @@ export default function ContactDetailPage() {
               disabled={createRemMut.isPending}
             >
               Kaydet
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Temas Gönderim Dialog */}
+        <Dialog open={!!sendCandidate} onClose={() => setSendCandidate(null)} maxWidth="xs" fullWidth>
+          <DialogTitle>Gönderildi Olarak İşaretle</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Stack spacing={2}>
+              <Typography variant="body2">
+                {sendCandidate?.template_code} — {sendCandidate?.title}
+              </Typography>
+              <TextField
+                select
+                label="Gönderim Kanalı"
+                value={sendChannel}
+                onChange={(e) => setSendChannel(e.target.value as OutreachChannel)}
+                size="small"
+                fullWidth
+              >
+                {(Object.keys(OUTREACH_CHANNEL_LABELS) as OutreachChannel[]).map((ch) => (
+                  <MenuItem key={ch} value={ch}>
+                    {OUTREACH_CHANNEL_LABELS[ch]}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <FormControlLabel
+                control={
+                  <Checkbox checked={autoFollowup} onChange={(e) => setAutoFollowup(e.target.checked)} />
+                }
+                label="Sonraki takibi otomatik zamanla"
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSendCandidate(null)}>İptal</Button>
+            <Button
+              variant="contained"
+              onClick={() => sendMut.mutate()}
+              disabled={!sendChannel || sendMut.isPending}
+            >
+              Onayla
             </Button>
           </DialogActions>
         </Dialog>

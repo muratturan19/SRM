@@ -1,9 +1,10 @@
-# Kolektif360 SRM v1.3.0
+# Kolektif360 SRM v1.4.0
 
 **S**elin **R**elations **M**anagement — Modern, hafif müşteri ilişkileri yönetim sistemi.
 
 ## Özellikler
 
+- 📨 **Temas (Outreach) Otomasyonu** — Kişinin halkasına (kişisel ağ/referans/soğuk temas) göre doğru şablonu CRM verisiyle doldurup sunar; "Gönderildi" işaretlendiğinde bir sonraki takip otomatik zamanlanır, cevapsız kalan kişiler otomatik pasife alınır. Şablonlar ve süreler (takip/pasife alma/yeniden temas eşikleri) Ayarlar'dan düzenlenir, koda gömülü değildir.
 - 🎤 **Sesli Giriş** — Konuşarak yeni kişi, görüşme notu veya hatırlatıcı oluşturma; yapay zeka niyeti anlayıp doğru yere yazar, kaydetmeden önce gözden geçirilir
 - 📇 **Kartvizit Tarama** — Claude Sonnet 4.6 veya GPT-5.5 vision ile otomatik veri doldurma
 - 🗂️ **Pipeline Kanban** — Sürükle-bırak ile lead'den müşteriye geçiş
@@ -115,11 +116,11 @@ Backend çalışırken hatırlatıcı zamanı geldiğinde:
 SRM/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/     # contacts, deals, activities, reminders, scan, voice, dashboard
+│   │   ├── api/routes/     # contacts, deals, activities, reminders, outreach, scan, voice, dashboard
 │   │   ├── core/           # config, database, phone_utils
-│   │   ├── models/         # SQLAlchemy modelleri (contact, deal, activity, reminder)
+│   │   ├── models/         # SQLAlchemy modelleri (contact, deal, activity, reminder, outreach_template)
 │   │   ├── schemas/        # Pydantic şemaları
-│   │   └── services/       # card_scanner, voice_processor, reminder_scheduler
+│   │   └── services/       # card_scanner, voice_processor, reminder_scheduler, outreach_service
 │   ├── data/.env           # Ayarlar (versiyon kontrolüne girmesin!)
 │   └── requirements.txt
 ├── frontend/

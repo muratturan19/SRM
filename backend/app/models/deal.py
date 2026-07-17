@@ -17,6 +17,16 @@ class DealStage(str, enum.Enum):
     LOST = "lost"
 
 
+class LostReasonCategory(str, enum.Enum):
+    FIYAT = "fiyat"
+    ZAMANLAMA = "zamanlama"
+    ILGISIZ = "ilgisiz"
+    RAKIP = "rakip"
+    BUTCE_YOK = "butce_yok"
+    YANLIS_KARAR_VERICI = "yanlis_karar_verici"
+    DIGER = "diger"
+
+
 class Deal(Base):
     __tablename__ = "deals"
 
@@ -35,6 +45,10 @@ class Deal(Base):
     contract_date: Mapped[date | None] = mapped_column(Date)
     contract_pdf_path: Mapped[str | None] = mapped_column(String(500))
     notes: Mapped[str | None] = mapped_column(Text)
+    lost_reason_category: Mapped[LostReasonCategory | None] = mapped_column(
+        SAEnum(LostReasonCategory, name="lostreasoncategory"), nullable=True
+    )
+    lost_reason_note: Mapped[str | None] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -3,7 +3,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
-from app.models.deal import DealStage
+from app.models.deal import DealStage, LostReasonCategory
 
 
 class ContactSummary(BaseModel):
@@ -36,12 +36,16 @@ class DealUpdate(BaseModel):
     probability: Optional[int] = None
     contract_date: Optional[date] = None
     notes: Optional[str] = None
+    lost_reason_category: Optional[LostReasonCategory] = None
+    lost_reason_note: Optional[str] = None
 
 
 class DealRead(DealBase):
     id: uuid.UUID
     contact_id: uuid.UUID
     contract_pdf_path: Optional[str] = None
+    lost_reason_category: Optional[LostReasonCategory] = None
+    lost_reason_note: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     contact: Optional[ContactSummary] = None

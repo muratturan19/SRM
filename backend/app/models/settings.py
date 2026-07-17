@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Text, Boolean, Integer
+from sqlalchemy import Text, Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -20,6 +20,12 @@ class SystemSettings(Base):
     )
     snooze_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     snooze_days: Mapped[int] = mapped_column(Integer, default=2)
+
+    # Temas (outreach) otomasyonu ayarları
+    max_followups: Mapped[int] = mapped_column(Integer, default=2)          # ilk mesaj + en fazla kaç takip
+    passive_after_days: Mapped[int] = mapped_column(Integer, default=14)    # son temastan sonra pasife alma eşiği
+    reactivate_after_days: Mapped[int] = mapped_column(Integer, default=90)  # pasiften yeniden temas hatırlatma eşiği
+    selin_title: Mapped[str] = mapped_column(String(200), default="İş Geliştirme Ortağı")
 
     @property
     def reminder_rules(self) -> list:

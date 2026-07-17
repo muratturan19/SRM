@@ -9,8 +9,8 @@ import {
   Box,
 } from '@mui/material'
 import { Controller, type Control } from 'react-hook-form'
-import type { ContactStage } from '../types'
-import { STAGE_LABELS, PIPELINE_STAGES } from '../types'
+import type { ContactStage, OutreachTier } from '../types'
+import { STAGE_LABELS, PIPELINE_STAGES, OUTREACH_TIER_LABELS } from '../types'
 
 export interface ContactFormValues {
   name: string
@@ -30,6 +30,9 @@ export interface ContactFormValues {
   is_met: boolean
   is_demo_sent: boolean
   is_proposal_sent: boolean
+  outreach_tier?: OutreachTier | ''
+  referred_by?: string
+  common_context?: string
 }
 
 interface Props {
@@ -163,6 +166,44 @@ export default function ContactFormFields({ control }: Props) {
               ))}
             </TextField>
           )}
+        />
+      </Grid>
+
+      {/* Temas (outreach) yöntemi */}
+      <Grid item xs={12}>
+        <Divider sx={{ mb: 1 }} />
+        <Typography variant="subtitle2" gutterBottom>
+          Temas Yöntemi
+        </Typography>
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <Controller
+          name="outreach_tier"
+          control={control}
+          render={({ field }) => (
+            <TextField {...field} select label="Halka" fullWidth value={field.value ?? ''}>
+              <MenuItem value="">Belirlenmedi</MenuItem>
+              {(Object.keys(OUTREACH_TIER_LABELS) as OutreachTier[]).map((tier) => (
+                <MenuItem key={tier} value={tier}>
+                  {OUTREACH_TIER_LABELS[tier]}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+        />
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <Controller
+          name="referred_by"
+          control={control}
+          render={({ field }) => <TextField {...field} label="Referans (yönlendiren kişi)" fullWidth />}
+        />
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <Controller
+          name="common_context"
+          control={control}
+          render={({ field }) => <TextField {...field} label="Ortak geçmiş (ör. Teknorot yılları)" fullWidth />}
         />
       </Grid>
 

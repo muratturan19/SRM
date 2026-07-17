@@ -1,5 +1,8 @@
 import axios from 'axios'
-import type { Contact, Deal, Reminder, DashboardStats, SystemSettings, Activity, VoiceResult } from '../types'
+import type {
+  Contact, Deal, Reminder, DashboardStats, SystemSettings, Activity, VoiceResult,
+  OutreachTemplate, NextActionResponse, OutreachSendResponse, OutreachChannel, OutreachOutcome,
+} from '../types'
 
 const api = axios.create({ baseURL: '/api' })
 
@@ -104,6 +107,42 @@ export const settingsApi = {
 
   update: (data: Partial<SystemSettings>) =>
     api.put<SystemSettings>('/settings/', data).then((r) => r.data),
+}
+
+// ── Temas (outreach) otomasyonu ────────────────────────────────────
+export const outreachApi = {
+  templates: () => api.get<OutreachTemplate[]>('/outreach/templates').then((r) => r.data),
+
+  updateTemplate: (id: string, data: Partial<OutreachTemplate>) =>
+    api.patch<OutreachTemplate>(`/outreach/templates/${id}`, data).then((r) => r.data),
+
+  nextAction: (contactId: string) =>
+    api.get<NextActionResponse>(`/outreach/contacts/${contactId}/next-action`).then((r) => r.data),
+
+  send: (
+    contactId: string,
+    data: {
+      template_code: string
+      channel?: OutreachChannel
+      tarih_1?: string
+      tarih_2?: string
+      auto_schedule_followup?: boolean
+    },
+  ) => api.post<OutreachSendResponse>(`/outreach/contacts/${contactId}/send`, data).then((r) => r.data),
+
+  setOutcome: (contactId: string, activityId: string, outcome: OutreachOutcome) =>
+    api
+      .post<OutreachSendResponse>(`/outreach/contacts/${contactId}/outcome`, {
+        activity_id: activityId,
+        outcome,
+      })
+      .then((r) => r.data),
+
+  reactivate: (contactId: string) =>
+    api.post(`/outreach/contacts/${contactId}/reactivate`).then((r) => r.data),
+
+  markPassive: (contactId: string) =>
+    api.post(`/outreach/contacts/${contactId}/mark-passive`).then((r) => r.data),
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────

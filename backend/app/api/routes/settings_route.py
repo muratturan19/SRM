@@ -19,14 +19,22 @@ async def _get_or_create(db: AsyncSession) -> SystemSettings:
     return s
 
 
-@router.get("/", response_model=SystemSettingsRead)
-async def get_settings(db: AsyncSession = Depends(get_db)):
-    s = await _get_or_create(db)
+def _to_read(s: SystemSettings) -> SystemSettingsRead:
     return SystemSettingsRead(
         reminder_rules=s.reminder_rules,
         snooze_enabled=s.snooze_enabled,
         snooze_days=s.snooze_days,
+        max_followups=s.max_followups,
+        passive_after_days=s.passive_after_days,
+        reactivate_after_days=s.reactivate_after_days,
+        selin_title=s.selin_title,
     )
+
+
+@router.get("/", response_model=SystemSettingsRead)
+async def get_settings(db: AsyncSession = Depends(get_db)):
+    s = await _get_or_create(db)
+    return _to_read(s)
 
 
 @router.put("/", response_model=SystemSettingsRead)
@@ -38,9 +46,13 @@ async def update_settings(data: SystemSettingsUpdate, db: AsyncSession = Depends
         s.snooze_enabled = data.snooze_enabled
     if data.snooze_days is not None:
         s.snooze_days = data.snooze_days
+    if data.max_followups is not None:
+        s.max_followups = data.max_followups
+    if data.passive_after_days is not None:
+        s.passive_after_days = data.passive_after_days
+    if data.reactivate_after_days is not None:
+        s.reactivate_after_days = data.reactivate_after_days
+    if data.selin_title is not None:
+        s.selin_title = data.selin_title
     await db.flush()
-    return SystemSettingsRead(
-        reminder_rules=s.reminder_rules,
-        snooze_enabled=s.snooze_enabled,
-        snooze_days=s.snooze_days,
-    )
+    return _to_read(s)

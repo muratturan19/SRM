@@ -116,7 +116,7 @@ export default function ContactsPage() {
 
   const createMut = useMutation({
     mutationFn: (vars: { data: ContactFormValues; force?: boolean }) =>
-      contactsApi.create(vars.data, vars.force),
+      contactsApi.create({ ...vars.data, outreach_tier: vars.data.outreach_tier || undefined }, vars.force),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contacts'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })

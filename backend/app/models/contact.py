@@ -16,6 +16,13 @@ class ContactStage(str, enum.Enum):
     CUSTOMER = "customer"
 
 
+class OutreachTier(str, enum.Enum):
+    """Selin'in temas metodundaki 'halka' — hangi şablon setinin uygulanacağını belirler."""
+    RING1_PERSONAL = "ring1_personal"   # Halka 1: kişisel tanışıklık
+    RING2_REFERRAL = "ring2_referral"   # Halka 2: referansla ulaşılan
+    RING3_COLD = "ring3_cold"           # Halka 3: soğuk temas
+
+
 class Contact(Base):
     __tablename__ = "contacts"
 
@@ -42,6 +49,15 @@ class Contact(Base):
         default=ContactStage.LEAD,
         nullable=False,
     )
+
+    # Temas (outreach) otomasyonu
+    outreach_tier: Mapped[OutreachTier | None] = mapped_column(
+        SAEnum(OutreachTier, name="outreachtier"), nullable=True
+    )
+    referred_by: Mapped[str | None] = mapped_column(String(200))   # [referans]
+    common_context: Mapped[str | None] = mapped_column(String(300))  # [ortak-bağlam]
+    is_passive: Mapped[bool] = mapped_column(Boolean, default=False)
+    passive_since: Mapped[datetime | None] = mapped_column(DateTime)
 
     # Milestone checkboxes
     is_contacted: Mapped[bool] = mapped_column(Boolean, default=False)
