@@ -1,6 +1,6 @@
 # ROADMAP
 
-Bu dosya SRM için değerlendirilen ama henüz karara bağlanmamış fikirleri ve
+Bu dosya Operon_CRM için değerlendirilen ama henüz karara bağlanmamış fikirleri ve
 sıradaki öncelikleri kaybetmemek için tutulur.
 
 Durum etiketleri:

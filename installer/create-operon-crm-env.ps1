@@ -1,7 +1,7 @@
 param(
-    [string]$DataDir       = "C:\ProgramData\KolektifSRM",
+    [string]$DataDir       = "C:\ProgramData\Operon_CRM",
     [string]$DbPass        = "Mm3471891298",
-    [string]$DbName        = "kolektif360_crm",
+    [string]$DbName        = "operon_crm",
     [string]$AnthropicKey  = "",
     [string]$OpenAIKey     = "",
     [string]$ScanProvider  = "claude",

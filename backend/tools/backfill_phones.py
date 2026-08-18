@@ -7,7 +7,7 @@ from app.core.phone_utils import normalize_phone
 
 async def fix():
     conn = await asyncpg.connect(
-        'postgresql://postgres:Mm3471891298@localhost:5432/kolektif360_crm'
+        'postgresql://postgres:Mm3471891298@localhost:5432/operon_crm'
     )
     rows = await conn.fetch(
         'SELECT id, phone, phone2 FROM contacts WHERE phone IS NOT NULL OR phone2 IS NOT NULL'

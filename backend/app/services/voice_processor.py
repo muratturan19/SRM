@@ -42,7 +42,7 @@ def transcribe(audio: bytes, filename: str = "voice.webm", token: str = "") -> s
 
 # ── ② Niyet + alan çıkarımı — portal relay ───────────────────────────────────
 
-_EXTRACTION_SYSTEM = """Sen bir CRM asistanısın. Kullanıcının (Selin) Türkçe sesli notunu \
+_EXTRACTION_SYSTEM = """Sen bir CRM asistanısın. Kullanıcının Türkçe sesli notunu \
 analiz edip yapılandırılmış JSON üretirsin. Niyeti şu üçünden biri olarak sınıflandır:
 
 - "new_contact": Yeni bir kişi/müşteri kaydı oluşturma (isim, telefon, e-posta, şirket vb. anlatır).

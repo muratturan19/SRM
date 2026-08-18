@@ -1,6 +1,6 @@
 {
-  "name": "kolektif360-crm",
-  "version": "1.4.0",
+  "name": "operon-crm",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "scripts": {

@@ -17,7 +17,7 @@ class ContactStage(str, enum.Enum):
 
 
 class OutreachTier(str, enum.Enum):
-    """Selin'in temas metodundaki 'halka' — hangi şablon setinin uygulanacağını belirler."""
+    """Temas metodundaki 'halka' — hangi şablon setinin uygulanacağını belirler."""
     RING1_PERSONAL = "ring1_personal"   # Halka 1: kişisel tanışıklık
     RING2_REFERRAL = "ring2_referral"   # Halka 2: referansla ulaşılan
     RING3_COLD = "ring3_cold"           # Halka 3: soğuk temas

@@ -28,6 +28,14 @@ class SystemSettings(Base):
     selin_title: Mapped[str] = mapped_column(String(200), default="İş Geliştirme Ortağı")
 
     @property
+    def sender_title(self) -> str:
+        return self.selin_title
+
+    @sender_title.setter
+    def sender_title(self, value: str) -> None:
+        self.selin_title = value
+
+    @property
     def reminder_rules(self) -> list:
         return json.loads(self.reminder_rules_json or "[]")
 

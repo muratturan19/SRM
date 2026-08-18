@@ -1,4 +1,4 @@
-# build.ps1 — KolektifSRM tam build scripti
+# build.ps1 — Operon_CRM tam build scripti
 #
 # Kullanım:
 #   .\build.ps1                        # Versiyon otomatik (1.0.0)
@@ -6,7 +6,7 @@
 #   .\build.ps1 -SkipFrontend          # Frontend build'i atla (zaten build edilmişse)
 #   .\build.ps1 -SkipPyInstaller       # Sadece .iss derle
 #
-# Çıktı: installer\Output\Setup_KolektifSRM_v{Version}.exe
+# Çıktı: installer\Output\Setup_Operon_CRM_v{Version}.exe
 #
 # Önkoşullar:
 #   - Node.js + npm
@@ -76,7 +76,7 @@ if (-not $SkipFrontend) {
 
 # ── 2. PyInstaller — backend exe ─────────────────────────────────────────────
 if (-not $SkipPyInstaller) {
-    Write-Step "PyInstaller — srm_backend.exe olusturuluyor"
+    Write-Step "PyInstaller — operon_crm_backend.exe olusturuluyor"
     Push-Location $Backend
     try {
         # pyinstaller kurulu mu?
@@ -86,39 +86,39 @@ if (-not $SkipPyInstaller) {
             & .venv\Scripts\pip.exe install pyinstaller --quiet
         }
         # Temiz build
-        if (Test-Path "dist\srm_backend") { Remove-Item "dist\srm_backend" -Recurse -Force }
-        & $pi srm_backend.spec --clean --noconfirm
+        if (Test-Path "dist\operon_crm_backend") { Remove-Item "dist\operon_crm_backend" -Recurse -Force }
+        & $pi operon_crm_backend.spec --clean --noconfirm
         if ($LASTEXITCODE -ne 0) { Write-Error "PyInstaller basarisiz!"; exit 1 }
     } finally {
         Pop-Location
     }
-    Assert-Exists "$Backend\dist\srm_backend\srm_backend.exe" "srm_backend.exe"
-    Assert-Exists "$Backend\dist\srm_backend\_internal\static\index.html" "Bundled frontend"
+    Assert-Exists "$Backend\dist\operon_crm_backend\operon_crm_backend.exe" "operon_crm_backend.exe"
+    Assert-Exists "$Backend\dist\operon_crm_backend\_internal\static\index.html" "Bundled frontend"
     Write-Host "PyInstaller tamamlandi." -ForegroundColor Green
 }
 
-# ── 3. Inno Setup — Setup_KolektifSRM_v{Version}.exe ─────────────────────────
+# ── 3. Inno Setup — Setup_Operon_CRM_v{Version}.exe ─────────────────────────
 # API anahtarlarını backend\data\.env'den okuyup ortam değişkenine koy.
-# srm_setup.iss bunları GetEnv ile derleme anında pakete gömer (git'e girmez).
+# operon_crm_setup.iss bunları GetEnv ile derleme anında pakete gömer (git'e girmez).
 $envFile = Join-Path $Backend "data\.env"
 if (Test-Path $envFile) {
     foreach ($line in Get-Content $envFile) {
-        if ($line -match '^ANTHROPIC_API_KEY=(.*)$') { $env:SRM_ANTHROPIC_KEY = $matches[1].Trim() }
-        elseif ($line -match '^OPENAI_API_KEY=(.*)$') { $env:SRM_OPENAI_KEY = $matches[1].Trim() }
+        if ($line -match '^ANTHROPIC_API_KEY=(.*)$') { $env:OPERON_CRM_ANTHROPIC_KEY = $matches[1].Trim() }
+        elseif ($line -match '^OPENAI_API_KEY=(.*)$') { $env:OPERON_CRM_OPENAI_KEY = $matches[1].Trim() }
     }
-    $akSet = if ($env:SRM_ANTHROPIC_KEY) { "DOLU" } else { "BOS" }
-    $okSet = if ($env:SRM_OPENAI_KEY) { "DOLU" } else { "BOS" }
+    $akSet = if ($env:OPERON_CRM_ANTHROPIC_KEY) { "DOLU" } else { "BOS" }
+    $okSet = if ($env:OPERON_CRM_OPENAI_KEY) { "DOLU" } else { "BOS" }
     Write-Host "API anahtarlari pakete gomulecek: Anthropic=$akSet, OpenAI=$okSet" -ForegroundColor Yellow
 } else {
     Write-Host "UYARI: backend\data\.env yok — anahtarlar bos gomulecek." -ForegroundColor Yellow
 }
 
 Write-Step "Inno Setup — kurulum paketi olusturuluyor (v$Version)"
-$issFile = Join-Path $Installer "srm_setup.iss"
+$issFile = Join-Path $Installer "operon_crm_setup.iss"
 & $iscc $issFile "/DMyAppVersion=$Version"
 if ($LASTEXITCODE -ne 0) { Write-Error "Inno Setup derleme basarisiz!"; exit 1 }
 
-$output = Join-Path $Installer "Output\Setup_KolektifSRM_v$Version.exe"
+$output = Join-Path $Installer "Output\Setup_Operon_CRM_v$Version.exe"
 Assert-Exists $output "Kurulum paketi"
 
 Write-Step "BUILD TAMAMLANDI"

@@ -228,7 +228,7 @@ async def export_contacts_csv(db: AsyncSession = Depends(get_db)):
         writer.writerow({f: getattr(c, f, "") or "" for f in CSV_FIELDS})
 
     output.seek(0)
-    filename = f"srm_contacts_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"operon_crm_contacts_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(
         iter([output.getvalue().encode("utf-8-sig")]),  # utf-8-sig: Excel BOM uyumu
         media_type="text/csv",

@@ -17,7 +17,7 @@ class OutreachChannel(str, enum.Enum):
 
 
 class OutreachTemplate(Base):
-    """Selin'in temas sürecindeki şablonlar (T1-T8) — arayüzden tamamen düzenlenebilir."""
+    """Varsayilan temas sürecindeki şablonlar (T1-T8) — arayüzden tamamen düzenlenebilir."""
 
     __tablename__ = "outreach_templates"
 
@@ -53,11 +53,9 @@ DEFAULT_TEMPLATES = [
         applicable_tiers="ring1_personal", is_first_touch=True,
         subject=None,
         body=(
-            "{{isim}} merhaba, Selin ben. {{ortak_baglam}} üzerinden epey zaman geçti. "
-            "Biz birkaç yıldır kolektif360'ta fabrikaların kendi verisinden kayıp avlayan araçlar "
-            "geliştiriyoruz — 8D'ler, duruş kayıtları, teklif dosyaları... ne varsa ondan besleniyor. "
-            "{{firma}}'da bunu bir kahve eşliğinde 30 dakika konuşmak isterim; satış toplantısı değil, "
-            "fikrini de almak istiyorum. Önümüzdeki hafta müsait olduğun bir gün var mı?"
+            "{{isim}} merhaba, {{ortak_baglam}} üzerinden epey zaman geçti. "
+            "{{firma}} tarafında faydalı olabileceğini düşündüğüm bir yaklaşım için kısa bir görüşme "
+            "önermek istedim. Uygunsa önümüzdeki hafta 20-30 dakikalık bir zaman ayırabilir miyiz?"
         ),
         follow_up_days=7, follow_up_template_code="T7", triggers_generic_followup=True, sort_order=1,
     ),
@@ -66,13 +64,11 @@ DEFAULT_TEMPLATES = [
         applicable_tiers="ring2_referral", is_first_touch=True,
         subject="{{referans}} yönlendirmesiyle — {{firma}} için kısa bir tanışma talebi",
         body=(
-            "{{isim}} {{unvan}} merhaba, ben kolektif360'tan Selin, {{selin_unvan}} olarak çalışıyorum. "
-            "{{referans}}, sizinle tanışmamızı önerdi. Ortağım Murat Turan, 20 yılını Bosch, Teknorot ve "
-            "HAUS gibi üreticilerde üretim yöneterek geçirmiş bir imalat mühendisi; kolektif360'ta "
-            "fabrikaların mevcut kayıtlarından — kalite, duruş, teklif dosyaları — tekrar eden kayıpları "
-            "ve riskleri ortaya çıkaran çözümler geliştiriyoruz. Yeni sistem kurulumu gerektirmiyor, mevcut "
-            "kayıtlarla çalışıyoruz. {{firma}} için ne bulabileceğimizi Murat'ın da katılacağı 30 dakikalık "
-            "bir görüşmede gösterebiliriz. {{tarih_1}} veya {{tarih_2}} size uyar mı?"
+            "{{isim}} {{unvan}} merhaba, {{referans}} sizinle tanışmamızı önerdi. "
+            "{{gonderen_unvani}} rolünde çalışıyorum; {{firma}} için mevcut kayıtlar ve süreç verileri "
+            "üzerinden tekrar eden sorunları ve iyileştirme alanlarını görünür kılmaya yardımcı olabilecek "
+            "bir yaklaşım paylaşmak isterim. Uygunsa {{tarih_1}} veya {{tarih_2}} için kısa bir tanışma "
+            "görüşmesi planlayabilir miyiz?"
         ),
         follow_up_days=7, follow_up_template_code="T7", triggers_generic_followup=True, sort_order=2,
     ),
@@ -81,10 +77,8 @@ DEFAULT_TEMPLATES = [
         applicable_tiers="ring2_referral,ring3_cold", is_first_touch=True,
         subject=None,
         body=(
-            "Merhaba {{isim}} {{unvan}} — kolektif360'ta Bursa merkezli çalışıyoruz; ekibimiz 20+ yıl "
-            "Tofaş / Bosch/Teknorot/HAUS'ta üretim yönetti, eğitim yöneticiliği yaptı. Üreticilerin kendi "
-            "kayıtlarından kayıp ve risk çıkaran çözümler geliştiriyoruz. Bölge sanayicileriyle bağlantıda "
-            "olmak isterim."
+            "Merhaba {{isim}} {{unvan}}. Süreç verileri, operasyonel görünürlük ve iyileştirme konularında "
+            "çalışan profesyonellerle bağlantıda kalmayı önemsiyorum. Uygunsa bağlantı kurmak isterim."
         ),
         # Cevapsızlıkta otomatik T7 tetiklenmez — LinkedIn daveti kabul edilirse ertesi gün T4 önerilir.
         follow_up_days=1, follow_up_template_code="T4", triggers_generic_followup=False, sort_order=3,
@@ -94,11 +88,10 @@ DEFAULT_TEMPLATES = [
         applicable_tiers="ring2_referral,ring3_cold", is_first_touch=False,
         subject=None,
         body=(
-            "Bağlantı için teşekkürler {{isim}} {{unvan}}. Kısaca anlatayım: elinizdeki 8D, duruş, hurda "
-            "ve teklif kayıtlarından \"hangi problem tekrar ediyor, hangi aksiyon işe yaramamış, kaybın TL "
-            "karşılığı ne\" sorularına cevap çıkarıyoruz — yeni sistem kurmadan, mevcut kayıtlarla. Ortağım "
-            "Murat Turan'ın da katılacağı 30 dakikalık bir görüşmede {{firma}} için ne bulabileceğimizi "
-            "konuşmak isteriz. {{tarih_1}} veya {{tarih_2}} uygun mudur?"
+            "Bağlantı için teşekkürler {{isim}} {{unvan}}. Kısaca paylaşayım: mevcut kayıtlar üzerinden "
+            "tekrar eden sorunları, aksiyonların etkisini ve olası iyileştirme alanlarını görünür kılmaya "
+            "yardımcı olan bir yaklaşım üzerinde çalışıyoruz. Uygunsa {{firma}} için bunu {{tarih_1}} veya "
+            "{{tarih_2}} tarihinde 30 dakikalık kısa bir görüşmede konuşabiliriz."
         ),
         follow_up_days=7, follow_up_template_code="T7", triggers_generic_followup=True, sort_order=4,
     ),
@@ -107,16 +100,12 @@ DEFAULT_TEMPLATES = [
         applicable_tiers="ring3_cold", is_first_touch=True,
         subject="{{firma}} — kayıtlarınızdaki görünmeyen tekrar eden kayıp",
         body=(
-            "{{isim}} {{unvan}} merhaba, ben kolektif360'tan Selin. Ortağım Murat Turan 20 yılını Bosch, "
-            "Teknorot ve HAUS gibi üreticilerde üretim yöneterek geçirdi; şirketimiz Bursa Ulutek "
-            "Teknokent'te, üreticilerin mevcut kayıtlarından tekrar eden kayıpları ve riskleri ortaya "
-            "çıkaran çözümler geliştiriyor. Sıkça gördüğümüz tablo şu: aynı kök nedene bağlı problemler "
-            "farklı kodlarla defalarca kaydediliyor, alınan aksiyonların işe yaramadığı fark edilmiyor ve "
-            "kayıp kimsenin toplamadığı bir maliyet olarak birikiyor. Bunu tespit etmek için yeni bir "
-            "sistem kurmanız gerekmiyor; mevcut kayıtlarınız (Excel dahil) yeterli. 30 dakikalık bir "
-            "görüşmede {{firma}} için nasıl çalıştığını somut örnekle gösterebiliriz. {{tarih_1}} veya "
-            "{{tarih_2}} için kısa bir görüşme ayarlayabilir miyiz?\n\n"
-            "Saygılarımla, Selin [Soyadı] — kolektif360, Ulutek Teknokent, Bursa"
+            "{{isim}} {{unvan}} merhaba. Pek çok ekipte benzer bir tablo görüyoruz: aynı kök nedene bağlı "
+            "problemler farklı kayıtlarla tekrar ediyor, alınan aksiyonların etkisi net izlenemiyor ve kayıp "
+            "zamanla görünmez bir maliyete dönüşüyor. Bu tür tekrar eden alanları mevcut kayıtlar üzerinden "
+            "görünür kılmaya yardımcı olan bir yaklaşımı {{firma}} için paylaşmak isterim. Uygunsa {{tarih_1}} "
+            "veya {{tarih_2}} tarihinde kısa bir görüşme planlayabilir miyiz?\n\n"
+            "İyi çalışmalar dilerim."
         ),
         follow_up_days=7, follow_up_template_code="T7", triggers_generic_followup=True, sort_order=5,
     ),
@@ -125,12 +114,11 @@ DEFAULT_TEMPLATES = [
         applicable_tiers="ring2_referral,ring3_cold", is_first_touch=True,
         subject=None,
         body=(
-            "\"{{isim}} {{unvan}} merhaba, ben kolektif360'tan Selin — [referans varsa: {{referans}} "
-            "yönlendirmesiyle arıyorum]. Kısa tutacağım: ortağım Murat Turan 20 yıl Bosch ve Teknorot'ta "
-            "üretim yönetti; fabrikaların kendi kalite ve üretim kayıtlarından tekrar eden kayıpları çıkaran "
-            "çözümler geliştiriyoruz. Telefonda anlatmaya kalkmayacağım; Murat'la birlikte 30 dakika "
-            "gösterebilsek {{firma}} için ne bulabileceğimizi net görürsünüz. {{tarih_1}} mi {{tarih_2}} mi "
-            "size daha uygun?\"\n\n"
+            "\"{{isim}} {{unvan}} merhaba, [referans varsa: {{referans}} yönlendirmesiyle] arıyorum. "
+            "Kısa tutacağım: {{firma}} tarafında mevcut kayıtlar üzerinden tekrar eden sorunları ve "
+            "iyileştirme alanlarını görünür kılabilecek bir yaklaşımı paylaşmak isterim. Telefonda detaya "
+            "girmeyeyim; 20-30 dakikalık kısa bir görüşme için {{tarih_1}} mi {{tarih_2}} mi size daha "
+            "uygun?\"\n\n"
             "(İki tarih önermek — \"salı mı perşembe mi\" — açık uçlu \"müsait misiniz\"den her zaman daha "
             "iyi sonuç verir.)"
         ),
@@ -162,3 +150,25 @@ DEFAULT_TEMPLATES = [
         follow_up_days=None, follow_up_template_code=None, triggers_generic_followup=False, sort_order=8,
     ),
 ]
+
+
+LEGACY_TEMPLATE_SIGNATURES = {
+    "T1": [
+        ("{{ortak_baglam}} üzerinden epey zaman geçti", "kayıp avlayan", "30 dakika konuşmak isterim"),
+    ],
+    "T2": [
+        ("{{referans}}, sizinle tanışmamızı önerdi", "Murat'ın da katılacağı", "Yeni sistem kurulumu gerektirmiyor"),
+    ],
+    "T3": [
+        ("Bölge sanayicileriyle bağlantıda olmak isterim", "kayıtlarından kayıp ve risk çıkaran"),
+    ],
+    "T4": [
+        ("hangi problem tekrar ediyor", "kaybın TL karşılığı ne", "{{tarih_1}} veya {{tarih_2}} uygun mudur"),
+    ],
+    "T5": [
+        ("aynı kök nedene bağlı problemler", "kayıp kimsenin toplamadığı bir maliyet", "somut örnekle gösterebiliriz"),
+    ],
+    "T6": [
+        ("Telefonda anlatmaya kalkmayacağım", "30 dakika gösterebilsek", "{{tarih_1}} mi {{tarih_2}} mi size daha uygun"),
+    ],
+}

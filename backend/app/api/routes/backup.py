@@ -12,10 +12,12 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
+from app.core.auth import get_current_user
 from app.core.config import settings
+from app.core.database import ensure_tenant_db
 
 router = APIRouter()
 
@@ -35,26 +37,26 @@ def _find_pg_bin() -> Path:
     )
 
 
-# ── DB URL ayrıştırıcı ───────────────────────────────────────────────────────
-
-def _parse_db_url(url: str) -> dict:
-    """
-    postgresql+asyncpg://user:pass@host:port/dbname
-    → {'user', 'password', 'host', 'port', 'dbname'}
-    """
-    url = re.sub(r"^postgresql\+\w+://", "", url)  # driver prefix
-    url = re.sub(r"^postgresql://", "", url)
-    userpass, rest = url.split("@", 1)
-    user, password = userpass.split(":", 1)
-    hostport, dbname = rest.split("/", 1)
-    host, port = (hostport.split(":", 1) if ":" in hostport else (hostport, "5432"))
-    return {"user": user, "password": password, "host": host, "port": port, "dbname": dbname}
-
-
 # ── Yedek dizini ─────────────────────────────────────────────────────────────
 
-def _backup_dir() -> Path:
-    d = Path(settings.data_dir) / "backups"
+def _normalize_tenant_slug(tenant_slug: str) -> str:
+    if not re.match(r"^[a-zA-Z0-9_-]+$", tenant_slug):
+        raise HTTPException(status_code=400, detail="Geçersiz tenant")
+    return tenant_slug
+
+
+def _tenant_db_config(tenant_slug: str) -> dict:
+    return {
+        "user": settings.database_user,
+        "password": settings.database_password,
+        "host": settings.database_host,
+        "port": str(settings.database_port),
+        "dbname": f"tenant_{tenant_slug}_operon_crm",
+    }
+
+
+def _backup_dir(tenant_slug: str) -> Path:
+    d = Path(settings.data_dir) / "backups" / _normalize_tenant_slug(tenant_slug)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -62,13 +64,15 @@ def _backup_dir() -> Path:
 # ── Endpoint'ler ─────────────────────────────────────────────────────────────
 
 @router.get("/backup")
-async def create_backup():
+async def create_backup(user: dict = Depends(get_current_user)):
     """Veritabanını yedekle — .sql dosyası döndür."""
     try:
+        tenant_slug = _normalize_tenant_slug(user.get("tenant_slug", "default"))
+        await ensure_tenant_db(tenant_slug)
         bin_dir = _find_pg_bin()
-        db = _parse_db_url(settings.database_url)
+        db = _tenant_db_config(tenant_slug)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = _backup_dir() / f"srm_backup_{ts}.sql"
+        backup_file = _backup_dir(tenant_slug) / f"operon_crm_backup_{ts}.sql"
 
         env = os.environ.copy()
         env["PGPASSWORD"] = db["password"]
@@ -105,10 +109,11 @@ async def create_backup():
 
 
 @router.get("/backups")
-async def list_backups():
+async def list_backups(user: dict = Depends(get_current_user)):
     """Kaydedilmiş yedek dosyalarını listele (en yeni ilk)."""
-    bdir = _backup_dir()
-    files = sorted(bdir.glob("srm_backup_*.sql"), reverse=True)
+    tenant_slug = _normalize_tenant_slug(user.get("tenant_slug", "default"))
+    bdir = _backup_dir(tenant_slug)
+    files = sorted(bdir.glob("operon_crm_backup_*.sql"), reverse=True)
     return [
         {
             "name": f.name,
@@ -120,7 +125,7 @@ async def list_backups():
 
 
 @router.post("/restore")
-async def restore_backup(file: UploadFile = File(...)):
+async def restore_backup(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     """
     .sql dosyasından veritabanını geri yükle.
     ⚠️ Mevcut veriler üzerine yazılır!
@@ -128,13 +133,15 @@ async def restore_backup(file: UploadFile = File(...)):
     if not (file.filename or "").endswith(".sql"):
         raise HTTPException(status_code=400, detail="Sadece .sql dosyası kabul edilir")
 
-    tmp_file = _backup_dir() / f"restore_tmp_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
+    tenant_slug = _normalize_tenant_slug(user.get("tenant_slug", "default"))
+    await ensure_tenant_db(tenant_slug)
+    tmp_file = _backup_dir(tenant_slug) / f"restore_tmp_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
     try:
         content = await file.read()
         tmp_file.write_bytes(content)
 
         bin_dir = _find_pg_bin()
-        db = _parse_db_url(settings.database_url)
+        db = _tenant_db_config(tenant_slug)
 
         env = os.environ.copy()
         env["PGPASSWORD"] = db["password"]
@@ -172,12 +179,13 @@ async def restore_backup(file: UploadFile = File(...)):
 
 
 @router.delete("/backups/{filename}")
-async def delete_backup(filename: str):
+async def delete_backup(filename: str, user: dict = Depends(get_current_user)):
     """Belirtilen yedek dosyasını sil."""
     # Güvenlik: sadece beklenen dosya adı formatı
-    if not re.match(r"^srm_backup_\d{8}_\d{6}\.sql$", filename):
+    if not re.match(r"^operon_crm_backup_\d{8}_\d{6}\.sql$", filename):
         raise HTTPException(status_code=400, detail="Geçersiz dosya adı")
-    target = _backup_dir() / filename
+    tenant_slug = _normalize_tenant_slug(user.get("tenant_slug", "default"))
+    target = _backup_dir(tenant_slug) / filename
     if not target.exists():
         raise HTTPException(status_code=404, detail="Dosya bulunamadı")
     target.unlink()

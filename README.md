@@ -1,6 +1,6 @@
-# Kolektif360 SRM v1.4.0
+# Operon_CRM v1.5.0
 
-**S**elin **R**elations **M**anagement — Modern, hafif müşteri ilişkileri yönetim sistemi.
+Operon_CRM — Modern, hafif müşteri ilişkileri yönetim sistemi.
 
 ## Özellikler
 
@@ -32,7 +32,7 @@
 ### 1. PostgreSQL Veritabanı
 
 ```sql
-CREATE DATABASE kolektif360_crm;
+CREATE DATABASE operon_crm;
 ```
 
 ---
@@ -40,7 +40,7 @@ CREATE DATABASE kolektif360_crm;
 ### 2. Backend
 
 ```powershell
-cd E:\Mira\SRM\backend
+cd E:\Mira\Operon_CRM\backend
 
 # Sanal ortam
 python -m venv .venv
@@ -50,8 +50,8 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # .env dosyasını oluştur
-copy data\.env.example data\.env
-# data\.env içindeki şifreyi düzenle
+copy data\.env.example .env
+# .env içindeki PostgreSQL ve portal ayarlarını düzenle
 
 # Başlat
 python run.py
@@ -60,12 +60,14 @@ python run.py
 Backend `http://localhost:8010` adresinde çalışır.  
 API dokümantasyonu: `http://localhost:8010/docs`
 
+Not: Bu sürüm SaaS/multi-tenant çalışır. Backend, portal tarafından verilen `access_token` cookie'sini doğrular ve tenant veritabanını `tenant_<slug>_operon_crm` formatında seçer.
+
 ---
 
 ### 3. Frontend
 
 ```powershell
-cd E:\Mira\SRM\frontend
+cd E:\Mira\Operon_CRM\frontend
 
 npm install
 npm run dev
@@ -75,19 +77,13 @@ Frontend `http://localhost:5173` adresinde açılır.
 
 ---
 
-### 4. Kartvizit Tarama & Sesli Giriş Ayarı
+### 4. Portal SSO ve Relay
 
-`backend/data/.env` dosyasına API anahtarlarını ekleyin:
+Bu sürümde kartvizit tarama ve sesli giriş çağrıları doğrudan yerel API key ile değil, portal SaaS relay üzerinden yapılır. Bu yüzden backend için ek LLM API key tanımlamak gerekmez.
 
-```env
-ANTHROPIC_API_KEY=sk-ant-...   # Claude Sonnet 4.6 (kartvizit + sesli giriş çıkarımı)
-OPENAI_API_KEY=sk-...          # GPT-5.5 yedek + sesli giriş STT (gpt-4o-mini-transcribe)
-SCAN_PROVIDER=claude           # Kartvizit: varsayılan claude
-VOICE_STT_PROVIDER=openai      # Sesli giriş ses→metin: openai | elevenlabs
-# ELEVENLABS_API_KEY=...       # (opsiyonel) en yüksek Türkçe STT doğruluğu için
-```
+Yerelde uygulamayı kullanabilmek için portalın ürettiği JWT token'ın backend'e `/api/sso/login` endpoint'i üzerinden post edilmesi ve `access_token` cookie'sinin set edilmesi gerekir.
 
-> Sesli giriş için tarayıcının mikrofon iznini vermesi gerekir (ilk kullanımda sorulur).
+> Sesli giriş için tarayıcının mikrofon iznini vermesi gerekir.
 
 ---
 
@@ -113,7 +109,7 @@ Backend çalışırken hatırlatıcı zamanı geldiğinde:
 ## Proje Yapısı
 
 ```
-SRM/
+Operon_CRM/
 ├── backend/
 │   ├── app/
 │   │   ├── api/routes/     # contacts, deals, activities, reminders, outreach, scan, voice, dashboard
@@ -129,6 +125,6 @@ SRM/
 │       ├── components/     # Layout, Sidebar, CardScannerModal, VoiceInputModal, ActivityTimeline, ReminderPopup
 │       ├── hooks/          # useAudioRecorder (MediaRecorder ses kaydı)
 │       ├── services/       # API client
-│       └── theme/          # Kolektif360 marka teması
+│       └── theme/          # Operon_CRM marka teması
 └── CHANGELOG.md
 ```

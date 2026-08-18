@@ -1,11 +1,11 @@
 # ============================================================
-# KolektifSRM - Kurulum Sonrasi Otomatik Test (self-test)
+# Operon_CRM - Kurulum Sonrasi Otomatik Test (self-test)
 # ============================================================
 # Servis ayaga kalkana kadar bekler, saglik kontrolu yapar,
 # tum sonucu bir log dosyasina yazar (ProgramData + Masaustu).
 # ============================================================
 param(
-    [string]$DataDir = "C:\ProgramData\KolektifSRM",
+    [string]$DataDir = "C:\ProgramData\Operon_CRM",
     [int]$Port       = 8010
 )
 
@@ -14,7 +14,7 @@ New-Item -ItemType Directory -Path $LogDir -Force -ErrorAction SilentlyContinue 
 $Log = Join-Path $LogDir "selftest.log"
 
 try { $Desktop = [Environment]::GetFolderPath('Desktop') } catch { $Desktop = $null }
-$DesktopLog = if ($Desktop) { Join-Path $Desktop "KolektifSRM_kurulum_testi.log" } else { $null }
+$DesktopLog = if ($Desktop) { Join-Path $Desktop "Operon_CRM_kurulum_testi.log" } else { $null }
 
 "" | Set-Content -Path $Log -Encoding UTF8
 function W([string]$m) {
@@ -24,12 +24,12 @@ function W([string]$m) {
     Write-Host $line
 }
 
-W "=== KolektifSRM Kurulum Testi ==="
+W "=== Operon_CRM Kurulum Testi ==="
 W ("Tarih: " + (Get-Date))
 W ("Veri dizini: $DataDir")
 
 # 1) Servis
-$svc = Get-Service KolektifSRM -ErrorAction SilentlyContinue
+$svc = Get-Service Operon_CRM -ErrorAction SilentlyContinue
 W ("Servis durumu: " + $(if ($svc) { "$($svc.Status)" } else { 'YOK / kayitli degil' }))
 
 # 2) PostgreSQL

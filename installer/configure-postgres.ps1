@@ -1,15 +1,15 @@
 # ============================================================
-# KolektifSRM — PostgreSQL Yapılandırıcı
+# Operon_CRM — PostgreSQL Yapılandırıcı
 # ============================================================
 # Görev:
 #   1. PostgreSQL kurulu değilse installer'dan sessiz kur
 #   2. Servis çalışmıyorsa başlat
-#   3. kolektif360_crm veritabanını oluştur
+#   3. operon_crm veritabanını oluştur
 # ============================================================
 
 param(
     [string]$PgPass  = "Mm3471891298",
-    [string]$DbName  = "kolektif360_crm"
+    [string]$DbName  = "operon_crm"
 )
 
 $ErrorActionPreference = "Stop"

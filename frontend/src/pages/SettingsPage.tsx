@@ -79,7 +79,7 @@ export default function SettingsPage() {
   const [maxFollowups, setMaxFollowups] = useState<number | null>(null)
   const [passiveAfterDays, setPassiveAfterDays] = useState<number | null>(null)
   const [reactivateAfterDays, setReactivateAfterDays] = useState<number | null>(null)
-  const [selinTitle, setSelinTitle] = useState<string | null>(null)
+  const [senderTitle, setSenderTitle] = useState<string | null>(null)
 
   const effectiveRules: ReminderRule[] = rules ?? data?.reminder_rules ?? DEFAULT_RULES
   const effectiveSnooze: boolean = snoozeEnabled ?? data?.snooze_enabled ?? false
@@ -87,7 +87,7 @@ export default function SettingsPage() {
   const effectiveMaxFollowups: number = maxFollowups ?? data?.max_followups ?? 2
   const effectivePassiveAfterDays: number = passiveAfterDays ?? data?.passive_after_days ?? 14
   const effectiveReactivateAfterDays: number = reactivateAfterDays ?? data?.reactivate_after_days ?? 90
-  const effectiveSelinTitle: string = selinTitle ?? data?.selin_title ?? 'İş Geliştirme Ortağı'
+  const effectiveSenderTitle: string = senderTitle ?? data?.sender_title ?? 'İş Geliştirme Ortağı'
 
   const updateMut = useMutation({
     mutationFn: (payload: Partial<SystemSettings>) => settingsApi.update(payload),
@@ -150,7 +150,7 @@ export default function SettingsPage() {
       max_followups: effectiveMaxFollowups,
       passive_after_days: effectivePassiveAfterDays,
       reactivate_after_days: effectiveReactivateAfterDays,
-      selin_title: effectiveSelinTitle,
+      sender_title: effectiveSenderTitle,
     })
   }
 
@@ -171,7 +171,7 @@ export default function SettingsPage() {
       const blob = await r.blob()
       const cd = r.headers.get('Content-Disposition') ?? ''
       const match = cd.match(/filename="?([^"]+)"?/)
-      const filename = match?.[1] ?? `srm_backup_${Date.now()}.sql`
+      const filename = match?.[1] ?? `operon_crm_backup_${Date.now()}.sql`
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = filename; a.click()
@@ -316,7 +316,7 @@ export default function SettingsPage() {
           Temas (Outreach) Otomasyonu
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-          Selin'in temas sürecindeki takip zamanlamaları — belgedeki süreler burada
+          Varsayilan temas surecindeki takip zamanlamalari - belgedeki sureler burada
           değiştirilebilir, kodda sabit değildir.
         </Typography>
         <Stack spacing={2}>
@@ -354,11 +354,11 @@ export default function SettingsPage() {
             />
           </Stack>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="body2">Selin'in unvanı ({'{{selin_unvan}}'})</Typography>
+            <Typography variant="body2">Gonderen unvani ({'{{gonderen_unvani}}'})</Typography>
             <TextField
               size="small"
-              value={effectiveSelinTitle}
-              onChange={(e) => setSelinTitle(e.target.value)}
+              value={effectiveSenderTitle}
+              onChange={(e) => setSenderTitle(e.target.value)}
               sx={{ width: 220 }}
             />
           </Stack>
@@ -390,7 +390,7 @@ export default function SettingsPage() {
           Yaklaşım Şablonları (T1-T8)
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-          Selin'in ilk temas ve takip mesajları — metinler burada düzenlenir, kod
+          Varsayilan ilk temas ve takip mesajlari - metinler burada duzenlenir, kod
           değişikliği gerekmez.
         </Typography>
 

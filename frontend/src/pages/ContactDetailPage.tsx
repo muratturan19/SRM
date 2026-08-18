@@ -17,7 +17,7 @@ import { useForm, Controller } from 'react-hook-form'
 import dayjs from 'dayjs'
 import { contactsApi, dealsApi, remindersApi, activitiesApi, voiceApi, outreachApi } from '../services/api'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
-import { STAGE_LABELS, STAGE_COLORS, OUTREACH_TIER_LABELS, OUTREACH_CHANNEL_LABELS } from '../types'
+import { CONTACT_MILESTONES, STAGE_LABELS, STAGE_COLORS, OUTREACH_TIER_LABELS, OUTREACH_CHANNEL_LABELS } from '../types'
 import type { Contact, Deal, Reminder, Activity, NextActionCandidate, OutreachChannel } from '../types'
 import ContactFormFields from '../components/ContactForm'
 import type { ContactFormValues } from '../components/ContactForm'
@@ -417,18 +417,13 @@ export default function ContactDetailPage() {
                 <Typography variant="subtitle1" fontWeight={600} mb={1}>Temas Aşamaları</Typography>
                 <Divider sx={{ mb: 1.5 }} />
                 <Grid container>
-                  {[
-                    { key: 'is_contacted' as const, label: '✅ Temas Edildi' },
-                    { key: 'is_met' as const, label: '🤝 Görüşüldü' },
-                    { key: 'is_demo_sent' as const, label: '📊 Tanıtım Yollandı' },
-                    { key: 'is_proposal_sent' as const, label: '📋 Teklif Verildi' },
-                  ].map(({ key, label }) => (
-                    <Grid item xs={12} sm={6} key={key}>
+                  {CONTACT_MILESTONES.map(({ field, label }) => (
+                    <Grid item xs={12} sm={6} key={field}>
                       <FormControlLabel
                         control={
                           <Checkbox
-                            checked={contact[key]}
-                            onChange={(e) => checkboxMut.mutate({ [key]: e.target.checked })}
+                            checked={contact[field]}
+                            onChange={(e) => checkboxMut.mutate({ [field]: e.target.checked })}
                           />
                         }
                         label={label}

@@ -154,7 +154,7 @@ export default function ContactsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `srm_contacts_${new Date().toISOString().slice(0, 10)}.csv`
+      a.download = `operon_crm_contacts_${new Date().toISOString().slice(0, 10)}.csv`
       a.click()
       URL.revokeObjectURL(url)
     } catch {

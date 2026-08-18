@@ -13,7 +13,7 @@ class ActivityType(str, enum.Enum):
     EMAIL = "email"
     NOTE = "note"
     TASK = "task"
-    OUTREACH = "outreach"  # Şablon bazlı temas kaydı (kolektif360 yaklaşım süreci)
+    OUTREACH = "outreach"  # Şablon bazlı temas kaydı
 
 
 class Activity(Base):

@@ -1,7 +1,7 @@
 import { createTheme, alpha } from '@mui/material/styles'
 
-const PRIMARY = '#F47C20'   // Kolektif360 orange
-const DARK    = '#1C2536'   // Kolektif360 navy
+const PRIMARY = '#F47C20'
+const DARK    = '#1C2536'
 
 export const theme = createTheme({
   palette: {

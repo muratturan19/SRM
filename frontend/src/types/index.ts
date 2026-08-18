@@ -136,10 +136,17 @@ export const STAGE_LABELS: Record<ContactStage, string> = {
   lead: 'Potansiyel',
   contacted: 'Temas Edildi',
   met: 'Görüşüldü',
-  demo_sent: 'Tanıtım Yapıldı',
+  demo_sent: 'Tanıtım Yollandı',
   proposal_sent: 'Teklif Verildi',
   customer: 'Müşteri',
 }
+
+export const CONTACT_MILESTONES = [
+  { field: 'is_contacted', label: '✅ Temas Edildi' },
+  { field: 'is_met', label: '🤝 Görüşüldü' },
+  { field: 'is_demo_sent', label: '📊 Tanıtım Yollandı' },
+  { field: 'is_proposal_sent', label: '📋 Teklif Verildi' },
+] as const
 
 export const STAGE_COLORS: Record<ContactStage, string> = {
   lead: '#94A3B8',
@@ -259,7 +266,7 @@ export interface SystemSettings {
   max_followups: number
   passive_after_days: number
   reactivate_after_days: number
-  selin_title: string
+  sender_title: string
 }
 
 // ── Temas (outreach) otomasyonu ───────────────────────────────────

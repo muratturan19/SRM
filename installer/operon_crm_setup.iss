@@ -1,43 +1,43 @@
 ; =============================================================================
-; KolektifSRM — Inno Setup 6 Installer Script
+; Operon_CRM — Inno Setup 6 Installer Script
 ;
 ; Beklenen build girdileri:
-;   ..\backend\dist\srm_backend\srm_backend.exe
-;   ..\backend\dist\srm_backend\_internal\static\index.html  (frontend)
+;   ..\backend\dist\operon_crm_backend\operon_crm_backend.exe
+;   ..\backend\dist\operon_crm_backend\_internal\static\index.html  (frontend)
 ;   ..\tools\nssm.exe
 ;   postgresql-18.1-2-windows-x64.exe   (installer klasöründe)
 ;   vc_redist.x64.exe                   (installer klasöründe)
 ;
 ; Derleme:
-;   ISCC.exe installer\srm_setup.iss /DMyAppVersion=1.0.0
+;   ISCC.exe installer\operon_crm_setup.iss /DMyAppVersion=1.0.0
 ; =============================================================================
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.0"
 #endif
 
-#define MyAppName        "KolektifSRM"
-#define MyAppId          "KolektifSRM-3A1B2C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"
+#define MyAppName        "Operon_CRM"
+#define MyAppId          "Operon_CRM-3A1B2C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D"
 #define MyAppPublisher   "Kolektif360"
 #define MyAppURL         "https://kolektif360.com"
-#define MyAppExeName     "srm_backend.exe"
-#define MyServiceName    "KolektifSRM"
-#define MyServiceLabel   "Kolektif360 SRM Servisi"
-#define MyDistDir        "..\backend\dist\srm_backend"
+#define MyAppExeName     "operon_crm_backend.exe"
+#define MyServiceName    "Operon_CRM"
+#define MyServiceLabel   "Operon_CRM Servisi"
+#define MyDistDir        "..\backend\dist\operon_crm_backend"
 #define MyToolsDir       "..\tools"
-#define MyDataDir        "{commonappdata}\KolektifSRM"
+#define MyDataDir        "{commonappdata}\Operon_CRM"
 #define MyPort           "8010"
 
 ; API anahtarları derleme anında ortam değişkenlerinden gömülür (git'e girmez).
 ; build.ps1 bunları backend\data\.env'den okuyup set eder.
-#define SrmAnthropicKey GetEnv('SRM_ANTHROPIC_KEY')
-#define SrmOpenAIKey    GetEnv('SRM_OPENAI_KEY')
+#define OperonCrmAnthropicKey GetEnv('OPERON_CRM_ANTHROPIC_KEY')
+#define OperonCrmOpenAIKey    GetEnv('OPERON_CRM_OPENAI_KEY')
 
 ; Build artefaktları doğrulama
-#ifnexist "..\backend\dist\srm_backend\srm_backend.exe"
-  #error "srm_backend.exe bulunamadi. Once build.ps1 calistirin."
+#ifnexist "..\backend\dist\operon_crm_backend\operon_crm_backend.exe"
+  #error "operon_crm_backend.exe bulunamadi. Once build.ps1 calistirin."
 #endif
-#ifnexist "..\backend\dist\srm_backend\_internal\static\index.html"
+#ifnexist "..\backend\dist\operon_crm_backend\_internal\static\index.html"
   #error "Frontend static bulunamadi. build.ps1 frontend build yapiyor mu?"
 #endif
 #ifnexist "..\tools\nssm.exe"
@@ -78,8 +78,8 @@ CloseApplications=yes
 CloseApplicationsFilter={#MyAppExeName}
 RestartApplications=no
 UsePreviousAppDir=yes
-UninstallDisplayIcon={app}\srm.ico
-SetupIconFile=srm.ico
+UninstallDisplayIcon={app}\operon_crm.ico
+SetupIconFile=operon_crm.ico
 SetupLogging=yes
 ChangesEnvironment=no
 DisableReadyMemo=no
@@ -90,8 +90,8 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 
 
 ; ── Dizinler ──────────────────────────────────────────────────────────────────
-; {app}         = Program Files\KolektifSRM  → sadece binary (salt okunur)
-; {commonappdata}\KolektifSRM               → veri, .env, yedekler, loglar
+; {app}         = Program Files\Operon_CRM  → sadece binary (salt okunur)
+; {commonappdata}\Operon_CRM               → veri, .env, yedekler, loglar
 [Dirs]
 Name: "{#MyDataDir}"
 Name: "{#MyDataDir}\data"
@@ -113,26 +113,26 @@ Source: "vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 ; PostgreSQL yapılandırma ve .env oluşturma scriptleri
 Source: "configure-postgres.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "configure-postgres.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "create-srm-env.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "create-operon-crm-env.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 ; Kaldırma sırasında DB drop için {app}'te kalır
-Source: "drop-srm-db.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "drop-operon-crm-db.ps1"; DestDir: "{app}"; Flags: ignoreversion
 ; Kurulum sonrası otomatik test scripti
-Source: "srm-selftest.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "operon_crm_selftest.ps1"; DestDir: "{app}"; Flags: ignoreversion
 ; Markalı uygulama ikonu (kısayollar için)
-Source: "srm.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "operon_crm.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 ; ── Kısayollar ────────────────────────────────────────────────────────────────
 [Icons]
-Name: "{autoprograms}\{#MyAppName}\Kolektif360 SRM"; Filename: "{sys}\rundll32.exe"; \
+Name: "{autoprograms}\{#MyAppName}\Operon_CRM"; Filename: "{sys}\rundll32.exe"; \
   Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
-  IconFilename: "{app}\srm.ico"
-Name: "{autoprograms}\{#MyAppName}\SRM Kurulum Klasoru"; Filename: "{app}"
+  IconFilename: "{app}\operon_crm.ico"
+Name: "{autoprograms}\{#MyAppName}\Operon_CRM Kurulum Klasoru"; Filename: "{app}"
 Name: "{autoprograms}\{#MyAppName}\Kaldir"; Filename: "{uninstallexe}"
 ; Masaüstü kısayolu — her zaman oluşturulur
-Name: "{autodesktop}\Kolektif360 SRM"; \
+Name: "{autodesktop}\Operon_CRM"; \
   Filename: "{sys}\rundll32.exe"; \
   Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
-  IconFilename: "{app}\srm.ico"
+  IconFilename: "{app}\operon_crm.ico"
 
 ; ── Kurulum adımları ──────────────────────────────────────────────────────────
 [Run]
@@ -145,13 +145,13 @@ Filename: "{tmp}\vc_redist.x64.exe"; \
 
 ; 2. PostgreSQL kur + DB oluştur (idempotent — eksikse kurar, varsa atlar; HER ZAMAN çalışır)
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\configure-postgres.ps1"" -PgPass ""Mm3471891298"" -DbName ""kolektif360_crm"""; \
+  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\configure-postgres.ps1"" -PgPass ""Mm3471891298"" -DbName ""operon_crm"""; \
   StatusMsg: "PostgreSQL hazırlanıyor (gerekirse kuruluyor)..."; \
   Flags: runhidden waituntilterminated
 
 ; 3. .env dosyasını oluştur (zaten varsa script atlar; HER ZAMAN çalışır)
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\create-srm-env.ps1"" -DataDir ""{commonappdata}\KolektifSRM"" -AnthropicKey ""{#SrmAnthropicKey}"" -OpenAIKey ""{#SrmOpenAIKey}"""; \
+  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{tmp}\create-operon-crm-env.ps1"" -DataDir ""{commonappdata}\Operon_CRM"" -AnthropicKey ""{#OperonCrmAnthropicKey}"" -OpenAIKey ""{#OperonCrmOpenAIKey}"""; \
   StatusMsg: "Uygulama yapılandırması oluşturuluyor..."; \
   Flags: runhidden waituntilterminated
 
@@ -193,33 +193,33 @@ Filename: "{app}\nssm.exe"; \
   Parameters: "set {#MyServiceName} AppRotateFiles 1"; \
   Flags: runhidden waituntilterminated
 
-; SRM_DATA_DIR env → backend bu env var'dan veri dizinini bulur
+; OPERON_CRM_DATA_DIR env → backend bu env var'dan veri dizinini bulur
 Filename: "{app}\nssm.exe"; \
-  Parameters: "set {#MyServiceName} AppEnvironmentExtra SRM_DATA_DIR={#MyDataDir}"; \
+  Parameters: "set {#MyServiceName} AppEnvironmentExtra OPERON_CRM_DATA_DIR={#MyDataDir}"; \
   Flags: runhidden waituntilterminated
 
 ; 6. Servisi (yeniden) başlat — taze veya güncelleme farketmez (ssInstall'da durdurulmuştu)
 Filename: "{app}\nssm.exe"; \
   Parameters: "restart {#MyServiceName}"; \
-  StatusMsg: "KolektifSRM servisi başlatılıyor..."; \
+  StatusMsg: "Operon_CRM servisi başlatılıyor..."; \
   Flags: runhidden waituntilterminated
 
 ; 7. Kurulum sonrası otomatik self-test — servis ayağa kalkana kadar bekler, log oluşturur
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{app}\srm-selftest.ps1"" -DataDir ""{commonappdata}\KolektifSRM"""; \
+  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{app}\operon_crm_selftest.ps1"" -DataDir ""{commonappdata}\Operon_CRM"""; \
   StatusMsg: "Kurulum test ediliyor (servis ayağa kalkıyor, lütfen bekleyin)..."; \
   Flags: runhidden waituntilterminated
 
 ; 7b. Test sonucu logunu kullanıcıya göster
 Filename: "notepad.exe"; \
-  Parameters: """{commonappdata}\KolektifSRM\logs\selftest.log"""; \
+  Parameters: """{commonappdata}\Operon_CRM\logs\selftest.log"""; \
   Description: "Kurulum test sonucunu göster"; \
   Flags: nowait postinstall skipifsilent
 
 ; 8. Kurulum tamamlandı — tarayıcıyı aç
 Filename: "{sys}\rundll32.exe"; \
   Parameters: "url.dll,FileProtocolHandler http://127.0.0.1:{#MyPort}"; \
-  Description: "KolektifSRM'yi tarayıcıda aç"; \
+  Description: "Operon_CRM'i tarayıcıda aç"; \
   Flags: nowait postinstall skipifsilent
 
 ; ── Kaldırma ──────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName}"; \
   Flags: runhidden; RunOnceId: "KillProcess"
 ; Veritabanını sil
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{app}\drop-srm-db.ps1"""; \
+  Parameters: "-ExecutionPolicy Bypass -NonInteractive -File ""{app}\drop-operon-crm-db.ps1"""; \
   Flags: runhidden; RunOnceId: "DropDatabase"
 ; ProgramData'yı temizle (veri + yedekler dahil)
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
@@ -293,13 +293,12 @@ begin
        SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(1500);
   // 4) Eski .env'i sil — yeni anahtar/ayarlarla taze olussun (DB ve veriler KORUNUR)
-  EnvFile := ExpandConstant('{commonappdata}\KolektifSRM\data\.env');
+  EnvFile := ExpandConstant('{commonappdata}\Operon_CRM\data\.env');
   if FileExists(EnvFile) then
     DeleteFile(EnvFile);
   // 5) Eski kisayollari temizle (onceki kurulumlardan kalan farkli isimliler orphan kalmasin)
   DelTree(ExpandConstant('{autoprograms}\{#MyAppName}'), True, True, True);
-  DeleteFile(ExpandConstant('{autodesktop}\KolektifSRM.lnk'));
-  DeleteFile(ExpandConstant('{autodesktop}\Kolektif360 SRM.lnk'));
+  DeleteFile(ExpandConstant('{autodesktop}\Operon_CRM.lnk'));
 end;
 
 function InitializeSetup(): Boolean;

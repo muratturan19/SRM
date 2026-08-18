@@ -1,5 +1,5 @@
 """
-Selin'in temas (outreach) sürecini yöneten servis:
+Temas (outreach) sürecini yöneten servis:
 - Şablon metnini kişi verisiyle doldurma (kişiselleştirme kilidi)
 - Kişinin geçmiş temaslarına göre sıradaki şablonu/aksiyonu önerme
 - Temas kaydı (Activity type=OUTREACH) oluşturup otomatik takip hatırlatıcısı açma
@@ -41,12 +41,34 @@ async def get_settings(db: AsyncSession) -> SystemSettings:
 
 
 async def ensure_templates_seeded(db: AsyncSession) -> None:
-    count_res = await db.execute(select(func.count()).select_from(OutreachTemplate))
-    if count_res.scalar_one() > 0:
-        return
+    result = await db.execute(select(OutreachTemplate))
+    existing_by_code = {template.code: template for template in result.scalars().all()}
+
+    from app.models.outreach_template import LEGACY_TEMPLATE_SIGNATURES
+
     for tpl in DEFAULT_TEMPLATES:
-        db.add(OutreachTemplate(**tpl))
+        current = existing_by_code.get(tpl["code"])
+        if current is None:
+            db.add(OutreachTemplate(**tpl))
+            continue
+
+        legacy_signatures = LEGACY_TEMPLATE_SIGNATURES.get(current.code, [])
+        if not _matches_legacy_template(current.body, legacy_signatures):
+            continue
+
+        preserved_active = current.active
+        for field, value in tpl.items():
+            setattr(current, field, value)
+        current.active = preserved_active
     await db.flush()
+
+
+def _matches_legacy_template(body: str, signatures: list[tuple[str, ...]]) -> bool:
+    normalized = " ".join(body.split())
+    for signature in signatures:
+        if all(fragment in normalized for fragment in signature):
+            return True
+    return False
 
 
 async def template_by_code(db: AsyncSession, code: str) -> OutreachTemplate | None:
@@ -103,7 +125,8 @@ def render_template(
         "firma": contact.company,
         "referans": contact.referred_by,
         "ortak_baglam": contact.common_context,
-        "selin_unvan": settings_obj.selin_title,
+        "selin_unvan": settings_obj.sender_title,
+        "gonderen_unvani": settings_obj.sender_title,
         "tarih_1": tarih_1.strftime("%d.%m.%Y") if tarih_1 else None,
         "tarih_2": tarih_2.strftime("%d.%m.%Y") if tarih_2 else None,
     }
@@ -162,7 +185,7 @@ async def suggest_next_action(db: AsyncSession, contact: Contact) -> dict:
         if latest.template_code == "T3":
             due = latest.created_at + timedelta(days=1)
             return {"suggest_passive": False, "candidate_codes": ["T4"], "due_date": due}
-        # Pozitif cevap sonrası görüşme Selin tarafından planlanır — otomatik şablon önerilmez.
+        # Pozitif cevap sonrası görüşme kullanıcı tarafından planlanır — otomatik şablon önerilmez.
         return {"suggest_passive": False, "candidate_codes": [], "due_date": None}
 
     if outcome == "replied_negative":
@@ -193,7 +216,7 @@ async def log_touch(
     auto_schedule_followup: bool = True,
 ) -> tuple[Activity, Reminder | None]:
     """Temas kaydını (Activity type=OUTREACH) oluşturur; varsayılan olarak sonraki
-    takip için otomatik bir Reminder açar — Selin bunu dilediği gibi düzenleyebilir/silebilir."""
+    takip için otomatik bir Reminder açar — kullanıcı bunu dilediği gibi düzenleyebilir/silebilir."""
     settings_obj = await get_settings(db)
     template = await template_by_code(db, template_code)
     rendered = (
@@ -229,7 +252,7 @@ async def log_touch(
 
 
 async def set_outcome(db: AsyncSession, activity: Activity, outcome: str) -> Reminder | None:
-    """Selin bir temasın cevabını işaretledikçe çağrılır; gerekirse bir sonraki
+    """Bir temasın cevabı işaretlendikçe çağrılır; gerekirse bir sonraki
     adım için otomatik hatırlatıcı açar veya kişiyi pasife alır."""
     activity.outcome = outcome
     await db.flush()
@@ -271,7 +294,7 @@ async def reactivate_contact(db: AsyncSession, contact: Contact) -> None:
 
 
 async def mark_passive(db: AsyncSession, contact: Contact) -> None:
-    """Selin'in elle 'pasife al' demesi — otomatik zamanlayıcının önüne geçer."""
+    """Elle 'pasife al' işlemi — otomatik zamanlayıcının önüne geçer."""
     contact.is_passive = True
     contact.passive_since = datetime.utcnow()
     await db.flush()

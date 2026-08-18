@@ -1,6 +1,6 @@
 param(
     [string]$DbPass = "Mm3471891298",
-    [string]$DbName = "kolektif360_crm"
+    [string]$DbName = "operon_crm"
 )
 
 $SupportedVersions = @("18", "17", "16", "15")

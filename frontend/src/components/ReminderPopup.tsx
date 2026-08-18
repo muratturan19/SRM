@@ -31,9 +31,9 @@ export default function ReminderPopup() {
 
   const showBrowserToast = (r: Reminder) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Kolektif360 CRM — Hatırlatıcı', {
+      new Notification('Operon_CRM - Hatirlatici', {
         body: `${r.title}${r.contact_name ? ' — ' + r.contact_name : ''}`,
-        icon: '/favicon.svg',
+        icon: '/Operon_CRM_icon.png',
       })
     }
   }

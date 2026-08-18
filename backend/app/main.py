@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.4.0",
+    version="1.5.0",
     lifespan=lifespan,
     redirect_slashes=False,
 )
@@ -97,7 +97,7 @@ app.include_router(outreach.router, prefix="/api/outreach", tags=["outreach"])
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "app": settings.app_name, "version": "1.4.0"}
+    return {"status": "ok", "app": settings.app_name, "version": "1.5.0"}
 
 
 # Frontend SPA — SADECE /assets prefix'i mount edilir.

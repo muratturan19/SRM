@@ -1,4 +1,4 @@
-"""Multi-tenant veritabanı — JWT'den tenant_slug alınır, tenant_{slug}_srm DB kullanılır."""
+"""Multi-tenant veritabanı — JWT'den tenant_slug alınır, tenant_{slug}_operon_crm DB kullanılır."""
 import logging
 from typing import AsyncGenerator, Dict
 
@@ -56,7 +56,7 @@ async def ensure_tenant_db(tenant_slug: str) -> None:
 
     import asyncpg
 
-    db_name = f"tenant_{tenant_slug}_srm"
+    db_name = f"tenant_{tenant_slug}_operon_crm"
     conn = await asyncpg.connect(
         host=settings.database_host,
         port=settings.database_port,

@@ -1,10 +1,10 @@
-# srm_backend.spec — PyInstaller onedir paketi
+# operon_crm_backend.spec — PyInstaller onedir paketi
 #
 # Çalıştırma:
-#   cd E:\Mira\SRM\backend
-#   .venv\Scripts\pyinstaller.exe srm_backend.spec --clean
+#   cd E:\Mira\Operon_CRM\backend
+#   .venv\Scripts\pyinstaller.exe operon_crm_backend.spec --clean
 #
-# Çıktı: dist\srm_backend\srm_backend.exe  + _internal\static\  (frontend)
+# Çıktı: dist\operon_crm_backend\operon_crm_backend.exe  + _internal\static\  (frontend)
 
 import sys
 from pathlib import Path
@@ -20,7 +20,7 @@ _app_submodules = collect_submodules("app")
 FRONTEND_DIST = str((Path(SPECPATH).parent / "frontend" / "dist").resolve())
 
 # Uygulama ikonu (markalı .ico)
-APP_ICON = str((Path(SPECPATH).parent / "installer" / "srm.ico").resolve())
+APP_ICON = str((Path(SPECPATH).parent / "installer" / "operon_crm.ico").resolve())
 
 a = Analysis(
     ["run.py"],
@@ -118,7 +118,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="srm_backend",
+    name="operon_crm_backend",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -140,5 +140,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="srm_backend",
+    name="operon_crm_backend",
 )

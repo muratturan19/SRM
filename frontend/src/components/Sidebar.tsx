@@ -7,7 +7,6 @@ import {
   ListItemText,
   Typography,
   Divider,
-  Chip,
 } from '@mui/material'
 import {
   Dashboard,
@@ -55,21 +54,9 @@ export default function Sidebar({ width }: SidebarProps) {
       <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center' }}>
         <Box
           component="img"
-          src="/kolektif_acik.png"
-          alt="Kolektif360"
+          src="/Operon_CRM_light.png"
+          alt="Operon_CRM"
           sx={{ height: 36, width: 'auto', objectFit: 'contain' }}
-        />
-        <Chip
-          label="CRM"
-          size="small"
-          sx={{
-            ml: 1,
-            height: 20,
-            fontSize: 10,
-            fontWeight: 700,
-            bgcolor: 'primary.main',
-            color: '#fff',
-          }}
         />
       </Box>
 
@@ -95,7 +82,7 @@ export default function Sidebar({ width }: SidebarProps) {
       <Divider />
       <Box sx={{ p: 2 }}>
         <Typography variant="caption" color="text.secondary">
-          © 2026 Kolektif360
+          © 2026 Operon_CRM
         </Typography>
       </Box>
     </Drawer>

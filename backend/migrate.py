@@ -2,7 +2,7 @@
 import asyncio
 import asyncpg
 
-DSN = "postgresql://postgres:Mm3471891298@localhost:5432/kolektif360_crm"
+DSN = "postgresql://postgres:Mm3471891298@localhost:5432/operon_crm"
 
 async def main():
     conn = await asyncpg.connect(DSN)

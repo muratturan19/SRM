@@ -27,7 +27,7 @@ def _to_read(s: SystemSettings) -> SystemSettingsRead:
         max_followups=s.max_followups,
         passive_after_days=s.passive_after_days,
         reactivate_after_days=s.reactivate_after_days,
-        selin_title=s.selin_title,
+        sender_title=s.sender_title,
     )
 
 
@@ -52,7 +52,7 @@ async def update_settings(data: SystemSettingsUpdate, db: AsyncSession = Depends
         s.passive_after_days = data.passive_after_days
     if data.reactivate_after_days is not None:
         s.reactivate_after_days = data.reactivate_after_days
-    if data.selin_title is not None:
-        s.selin_title = data.selin_title
+    if data.sender_title is not None:
+        s.sender_title = data.sender_title
     await db.flush()
     return _to_read(s)

@@ -16,7 +16,7 @@ export default function Layout() {
       <Sidebar width={SIDEBAR_W} />
       <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
 
-        {/* ── SRM Header ─────────────────────────────── */}
+        {/* ── App Header ─────────────────────────────── */}
         <Box
           sx={{
             bgcolor: 'background.paper',
@@ -34,11 +34,10 @@ export default function Layout() {
             variant="subtitle1"
             sx={{ color: 'text.primary', fontWeight: 700 }}
           >
-            CRM değil,&nbsp;
-            <Box component="span" sx={{ color: 'primary.main' }}>SRM</Box>
+            Operon_CRM
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            — Selin Relations Management
+            AI destekli musteri iliskileri yonetimi
           </Typography>
 
           <Box sx={{ flexGrow: 1 }} />

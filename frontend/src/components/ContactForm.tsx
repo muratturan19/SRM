@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import { Controller, type Control } from 'react-hook-form'
 import type { ContactStage, OutreachTier } from '../types'
-import { STAGE_LABELS, PIPELINE_STAGES, OUTREACH_TIER_LABELS } from '../types'
+import { CONTACT_MILESTONES, STAGE_LABELS, PIPELINE_STAGES, OUTREACH_TIER_LABELS } from '../types'
 
 export interface ContactFormValues {
   name: string
@@ -38,13 +38,6 @@ export interface ContactFormValues {
 interface Props {
   control: Control<ContactFormValues>
 }
-
-const MILESTONES = [
-  { field: 'is_contacted' as const, label: '✅ Temas Edildi' },
-  { field: 'is_met' as const, label: '🤝 Görüşüldü' },
-  { field: 'is_demo_sent' as const, label: '📊 Tanıtım Yollandı' },
-  { field: 'is_proposal_sent' as const, label: '📋 Teklif Verildi' },
-]
 
 export default function ContactFormFields({ control }: Props) {
   return (
@@ -203,7 +196,7 @@ export default function ContactFormFields({ control }: Props) {
         <Controller
           name="common_context"
           control={control}
-          render={({ field }) => <TextField {...field} label="Ortak geçmiş (ör. Teknorot yılları)" fullWidth />}
+          render={({ field }) => <TextField {...field} label="Ortak geçmiş (ör. ortak etkinlik, önceki tanışıklık)" fullWidth />}
         />
       </Grid>
 
@@ -214,7 +207,7 @@ export default function ContactFormFields({ control }: Props) {
           Temas Aşamaları
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0 }}>
-          {MILESTONES.map(({ field, label }) => (
+          {CONTACT_MILESTONES.map(({ field, label }) => (
             <Controller
               key={field}
               name={field}

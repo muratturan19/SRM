@@ -6,6 +6,18 @@ Versiyon: [Semantic Versioning](https://semver.org/lang/tr/)
 
 ---
 
+## [1.5.0] — 2026-08-18
+
+### Değiştirildi
+- **Operon_CRM yeniden markalama:** Uygulama adı, teknik slug, build/installer artefaktları ve görünür uygulama varlıkları SRM yerine Operon_CRM olacak şekilde güncellendi.
+- **SaaS uyumu:** Portal SSO/cookie davranışı, tenant veritabanı adlandırması, backup adları ve docker servis etiketleri mevcut çok kiracılı Operon_CRM yapısıyla hizalandı.
+- **Tenant-nötr metinler:** Varsayılan outreach şablonları ve ilgili ayar ekranı metinleri belirli kişi/şirket hikâyesi içermeyecek şekilde genelleştirildi.
+- **Aşama/milestone tutarlılığı:** Kişi oluşturma ve kişi detay ekranlarında kullanılan milestone etiketleri ortak kaynaktan beslenecek şekilde eşitlendi.
+
+### Düzeltildi
+- **Eski şablon migrasyonu:** Değiştirilmemiş legacy outreach şablonları, tenant özelleştirmelerine dokunmadan yeni genel varsayılanlara otomatik güncellenir.
+- **Ayar alanı adlandırması:** Arayüz ve API tarafında gönderen unvanı artık `sender_title` olarak sunulur; mevcut veritabanı kolonu geriye dönük uyumluluk için korunur.
+
 ## [1.4.0] — 2026-07-17
 
 ### Eklendi
