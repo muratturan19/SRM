@@ -37,7 +37,7 @@ export default function Layout() {
             Operon_CRM
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            AI destekli musteri iliskileri yonetimi
+            AI Destekli Müşteri İlişkileri Yönetimi
           </Typography>
 
           <Box sx={{ flexGrow: 1 }} />
