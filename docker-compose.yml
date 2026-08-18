@@ -7,7 +7,7 @@ services:
     environment:
       - PORTAL_URL=https://portal.kolektif360.com
       - PORTAL_ISSUER=https://portal.kolektif360.com
-      - PORTAL_APP_SLUG=operon_crm
+      - PORTAL_APP_SLUG=srm
       - DATABASE_HOST=operon_crm_postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=postgres
@@ -33,6 +33,13 @@ services:
       - "traefik.http.routers.operon-crm-http.entrypoints=web"
       - "traefik.http.routers.operon-crm-http.middlewares=operon-crm-https-redirect"
       - "traefik.http.middlewares.operon-crm-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.operon-crm-legacy.rule=Host(`srm.kolektif360.com`)"
+      - "traefik.http.routers.operon-crm-legacy.entrypoints=websecure"
+      - "traefik.http.routers.operon-crm-legacy.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.operon-crm-legacy-http.rule=Host(`srm.kolektif360.com`)"
+      - "traefik.http.routers.operon-crm-legacy-http.entrypoints=web"
+      - "traefik.http.routers.operon-crm-legacy-http.middlewares=operon-crm-legacy-https-redirect"
+      - "traefik.http.middlewares.operon-crm-legacy-https-redirect.redirectscheme.scheme=https"
       # portal-auth EKLEME — SSO akışını kırar
 
   operon_crm_postgres:
@@ -55,7 +62,9 @@ services:
 
 volumes:
   operon_crm_uploads:
+    name: srm_uploads
   operon_crm_pgdata:
+    name: srm_pgdata
 
 networks:
   web:

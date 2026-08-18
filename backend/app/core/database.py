@@ -1,4 +1,4 @@
-"""Multi-tenant veritabanı — JWT'den tenant_slug alınır, tenant_{slug}_operon_crm DB kullanılır."""
+"""Multi-tenant veritabanı — JWT'den tenant_slug alınır, yeni DB adını tercih eder; varsa legacy DB'ye düşer."""
 import logging
 from typing import AsyncGenerator, Dict
 
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 _engines: Dict[str, AsyncEngine] = {}
 _session_makers: Dict[str, async_sessionmaker] = {}
+_resolved_db_names: Dict[str, str] = {}
 _initialized: set = set()
 
 
@@ -25,10 +26,19 @@ class Base(DeclarativeBase):
     pass
 
 
+def _legacy_db_name(tenant_slug: str) -> str | None:
+    suffix = settings.legacy_tenant_db_suffix
+    return settings.tenant_db_name(tenant_slug, suffix) if suffix else None
+
+
+def get_tenant_db_name(tenant_slug: str) -> str:
+    return _resolved_db_names.get(tenant_slug, settings.tenant_db_name(tenant_slug))
+
+
 def _get_engine(tenant_slug: str) -> AsyncEngine:
     if tenant_slug not in _engines:
         _engines[tenant_slug] = create_async_engine(
-            settings.tenant_db_url(tenant_slug),
+            settings.tenant_db_url(tenant_slug, get_tenant_db_name(tenant_slug)),
             echo=False,
             pool_pre_ping=True,
             pool_size=5,
@@ -56,7 +66,8 @@ async def ensure_tenant_db(tenant_slug: str) -> None:
 
     import asyncpg
 
-    db_name = f"tenant_{tenant_slug}_operon_crm"
+    db_name = settings.tenant_db_name(tenant_slug)
+    legacy_db_name = _legacy_db_name(tenant_slug)
     conn = await asyncpg.connect(
         host=settings.database_host,
         port=settings.database_port,
@@ -66,19 +77,26 @@ async def ensure_tenant_db(tenant_slug: str) -> None:
     )
     try:
         exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", db_name)
-        if not exists:
+        if exists:
+            resolved_db_name = db_name
+        elif legacy_db_name and await conn.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", legacy_db_name):
+            resolved_db_name = legacy_db_name
+            logger.info("Legacy tenant DB kullanılacak: %s", legacy_db_name)
+        else:
             await conn.execute(f'CREATE DATABASE "{db_name}"')
             logger.info("Tenant DB oluşturuldu: %s", db_name)
+            resolved_db_name = db_name
     finally:
         await conn.close()
 
+    _resolved_db_names[tenant_slug] = resolved_db_name
     engine = _get_engine(tenant_slug)
     async with engine.begin() as conn:
         # Modeller Base'e register olmuş olmalı (import sırası)
         await conn.run_sync(Base.metadata.create_all)
 
     _initialized.add(tenant_slug)
-    logger.info("Tenant DB hazır: %s", db_name)
+    logger.info("Tenant DB hazır: %s", resolved_db_name)
 
 
 async def get_db(

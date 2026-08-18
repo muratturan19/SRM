@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse
 
 from app.core.auth import get_current_user
 from app.core.config import settings
-from app.core.database import ensure_tenant_db
+from app.core.database import ensure_tenant_db, get_tenant_db_name
 
 router = APIRouter()
 
@@ -51,7 +51,7 @@ def _tenant_db_config(tenant_slug: str) -> dict:
         "password": settings.database_password,
         "host": settings.database_host,
         "port": str(settings.database_port),
-        "dbname": f"tenant_{tenant_slug}_operon_crm",
+        "dbname": get_tenant_db_name(tenant_slug),
     }
 
 
