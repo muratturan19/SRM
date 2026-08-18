@@ -62,9 +62,9 @@ services:
 
 volumes:
   operon_crm_uploads:
-    name: srm_uploads
+    name: srm_srm_uploads
   operon_crm_pgdata:
-    name: srm_pgdata
+    name: srm_srm_pgdata
 
 networks:
   web:
