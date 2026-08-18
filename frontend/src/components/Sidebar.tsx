@@ -51,12 +51,12 @@ export default function Sidebar({ width }: SidebarProps) {
       }}
     >
       {/* Logo */}
-      <Box sx={{ px: 1, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ px: 0.5, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box
           component="img"
           src="/Operon_CRM_light.png"
           alt="Operon_CRM"
-          sx={{ height: 100, width: '100%', maxWidth: '100%', objectFit: 'contain' }}
+          sx={{ height: 130, width: '100%', maxWidth: '100%', objectFit: 'contain' }}
         />
       </Box>
 
